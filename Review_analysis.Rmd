@@ -1,0 +1,239 @@
+---
+title: "Global analysis of studies in immunogenetics"
+author: "Hernández-Ledesma Ana Laura"
+date: "2024-06-17"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## STEP 1: Loading required packages and reading database
+```{r Reading database}
+#install.packages("sf")
+#install.packages("dplyr")
+#install.packages("spData")  ##Para la database world
+#install.packages("ggplot2")
+#install.packages("spDataLarge",
+ #                repos = "https://nowosad.github.io/drat/", type = "source")
+#install.packages("ggspatial")
+#install.packages("ggmap")
+#install.packages("leaflet")
+#install.packages("maptools")
+#install.packages("mapdeck") ## para recuperar coordenadas de las capitales
+#install.packages("ggnewscale") ## para poder asignar 2 paletas de colores en fill
+#install.packages("scatterpie") ## For scatterpie plots in the map
+#install.packages("wesanderson") ## For scatterpie plot colors 
+#install.packages("UpSetR")
+
+##Load libraries
+library(sf)
+library(dplyr)
+library(spData)
+library(ggplot2)
+library(ggspatial)
+library(ggmap)
+library(maptools)
+library(reshape2)
+library(mapdeck)  
+library(scatterpie) 
+library(wesanderson)  
+library(ggnewscale)
+library(UpSetR)
+library(tidyr)
+
+## Load data
+Data_review <- read.csv("~/R/Lupus/Review/Data_review.csv", header=TRUE)
+```
+
+## STEP 2: Selecting and plotting map for frequency and type of study
+```{r Plotting world map by continent}
+data(world) ## in-build data set part of the spData package
+plot(world["continent"], reset = FALSE)
+
+##extraer los paises de la database world
+regions <- data.frame(world$name_long, world$continent, world$subregion) ## mexico_departments 
+regions$world.name_long <- as.factor(regions$world.name_long)
+regions <-regions %>%
+  rename(Country=world.name_long, Continent = world.continent, Subregion = world.subregion)
+
+##Sumarize articulos por país
+data <- Data_review
+data <- as.data.frame(data) %>%
+  count(Country) ##%>%
+  ###rename(Freq= n) ##mexico_b
+
+##unir las bases de datos por paises
+regions <- regions %>%
+  dplyr::left_join(y=data, by = "Country")
+
+#Convert foreign object to an sf object
+sf_data <- st_as_sf(world) ## aquí van las coordenadas
+sf_data <- sf_data %>% 
+  rename(Country = name_long)
+  View(sf_data)
+
+##Preparar datos para el gráfico
+sf_data_studies <- sf_data %>% #data for graphic
+  left_join(y = regions, by = "Country")
+View(sf_data_studies)
+
+##Plotting
+worldmap <- sf_data_studies %>% 
+  ggplot(mapping = aes(fill = Freq)) +
+  geom_sf() +
+  scale_fill_viridis_c( # paleta de colores
+    option = "C", # C: plasma color
+    limits = c(1, 10), # Ajustar limites 
+    na.value = "white") + # colores en NA
+  labs(title = "Immunogenetics studies in underrepresented populations",
+       fill = "Number of studies") + 
+  theme_void() + # eliminar ejes con este tema
+  theme(plot.title = element_text(hjust = 0.5))
+
+### Scatterpie para tipo de enfermedades
+##Cargar los datos
+data_sp <- Data_review
+data_sp <- as.data.frame(data_sp) %>%
+  rename(Disease= 'associated.disease') %>%
+  count(Country, Disease) %>%
+  rename(Freq= n) ##mexico_b
+
+##Estimar frecuencias de enfermedades por país
+sp_diseases <- dcast(data_sp, Country ~ Disease, value.var = "Freq")
+
+sf_diseases <- sf_data_studies %>% #data for graphic
+  left_join(y = sp_diseases, by = "Country")
+View(sf_diseases)
+
+## Añadir coordenadas
+capitals_coordinates <- capitals %>%
+  rename(Country =country) %>%
+  left_join(y= sf_diseases, by ="Country")
+View(capitals_coordinates)
+
+##Setting na's as 0 before plotting
+disease_capital <- capitals_coordinates %>%
+  select(Country, lat, lon, Continent, n, 'Atherosclerosis', 'IgA nephropathy ', 'Primary sclerosing cholangitis', 'RA','Rheumatic heart disease risk ','SLE', 'Ssc')
+disease_capital[is.na(disease_capital)] <- 0
+
+##Mapping map and scatterpie plots
+#Scatter plots
+ggplot()+
+  geom_scatterpie(aes(x=lon, y=lat), 
+                  data=disease_capital, 
+                  cols= c( 'Atherosclerosis', 'IgA nephropathy ', 'Primary sclerosing cholangitis', 'RA','Rheumatic heart disease risk ','SLE', 'Ssc'))+
+  scale_fill_brewer()+
+  theme_minimal()+
+  theme(legend.position = 'bottom')
+
+#map
+map<- sf_data_studies %>% 
+  ggplot(mapping = aes(fill = Freq)) +
+  geom_sf()+
+  scale_fill_viridis_c( # paleta de colores
+    option = "C", # C: plasma color
+    limits = c(1, 10), # Ajustar limites 
+    na.value = "white") + # colores en NA
+  labs(title = "Immunogenetics studies in underrepresented populations",
+       fill = "Number of studies") + 
+  theme_void() + # eliminar ejes con este tema
+  theme(plot.title = element_text(hjust = 0.5))
+
+##Acoplar mapa y scatterpie
+ggplot() +
+  geom_scatterpie(aes(x=lon, y=lat), 
+                  data=disease_capital, 
+                  cols= c( 'Atherosclerosis', 'IgA nephropathy ', 'Primary sclerosing cholangitis', 'RA','Rheumatic heart disease risk ','SLE', 'Ssc'),
+                  pie_scale = 0.9,
+                  legend_name = "Disease",
+                  linewidth=0.2)+
+  scale_fill_brewer(palette = "Set3")+ 
+  theme_minimal()+
+  theme(legend.key.size = unit(0.3,'cm'),
+        legend.position = 'bottom',
+        legend.title = element_text(size=8),
+        legend.text = element_text(size=8))+
+    labs(title = "Immunogenetics studies in underrepresented populations",
+       fill = "Number of studies") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+sf_data_studies$n[is.na(sf_data_studies$n)] <- 0 ##changing NAs to 0
+sf_data_studies$n <- as.numeric(sf_data_studies$n)
+class(sf_data_studies$n)
+
+##Cargar paleta de colores para gradiente en # de estudios
+pal <- wes_palette("GrandBudapest2", 100, type = "continuous")
+
+#Plotting # de estudios y tipos de enfermedades
+ggplot() +
+  geom_sf(data= sf_data_studies, aes(fill = n)) +
+  scale_fill_gradientn( # paleta de colores
+    colors = pal,
+    limits = c(1, 5), # Ajustar limites 
+    na.value = "white") + # colores en NA)  
+  new_scale_fill()+ ## para asignar nueva escala de colores 
+  geom_scatterpie(aes(x=lon, y=lat), 
+                  data=disease_capital, 
+                  cols= c( 'Atherosclerosis', 'IgA nephropathy ', 'Primary sclerosing cholangitis', 'RA','Rheumatic heart disease risk ','SLE', 'Ssc'),
+                  pie_scale = 0.9,
+                  linewidth=0.2)+
+  scale_fill_brewer(palette = "Set3", guide=guide_legend(title.position="top"))+ 
+  theme_minimal()+
+  theme(legend.key.size = unit(0.3,'cm'),
+        legend.position = 'bottom',
+        legend.title = element_text(size=8, hjust = 0.5, face = "bold"),
+        legend.text = element_text(size=8))+
+    labs(title = "Immunogenetics studies in underrepresented populations",
+       fill = "Type of disease") + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+## STEP 3: Plotting ancestries by disease
+```{r Plotting ancestries and disease}
+ancestries <- Data_review %>%
+  select(-DOI, -Ancestry, -Continent, -Country)
+ancestries <- as.data.frame(ancestries)
+ancestries[is.na(ancestries)] <- 0
+
+upset(ancestries, main.bar.color = "#CC0066", mb.ratio = c(0.4,0.6), line.size = 1, mainbar.y.label = "Ancestries \n Intersections", sets.x.label = "Studies per ancestry", order.by = "freq", sets.bar.color = "#993366")
+
+## Proportion of ancestries by disease
+ances_prop <- ancestries %>%
+  as.data.frame() %>%
+  group_by(associated.disease, X) %>%
+  summarize_all(sum) %>%
+  as.data.frame()
+ances_prop
+
+trans_ances <-data.frame(t(ances_prop), row.names = names(ances_prop))
+trans_ances <- setNames(trans_ances, c('Atherosclerosis', 'IgA nephropathy', 'Primary sclerosing cholangitis', 'RA','Rheumatic heart disease risk','SLE', 'Ssc'))
+
+trans_ances <- trans_ances[-c(1), ]
+
+trans_ances <- cbind(trans_ances, ancestries=c("LatinAmerican","European","Asian","African","Oceanians","Admixed", "African.American", "European.American","Asian.American" ))
+trans_ances<- as.data.frame(trans_ances)
+
+ances_long <- gather(trans_ances, disease, measurement, 'Atherosclerosis':Ssc, factor_key = TRUE)
+ances_long$measurement <- as.numeric(ances_long$measurement)
+ances_long
+
+ggplot(ances_long, aes(fill=ancestries, y=measurement, x=disease)) + 
+  geom_bar(position="fill", stat= "identity")+
+  scale_fill_brewer(palette = "Set3", guide=guide_legend(title.position="top"))+ 
+  theme_linedraw()+
+  coord_flip()+
+  labs(title="Ancestries proportion by autoimmune disease")+
+  theme(axis.text.x = element_text( vjust = 1, hjust = 1))+
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5, size = 8),
+        axis.title = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(hjust = 0.5),
+        axis.text.y = element_text(size =10),
+        legend.position = "right")
+```
