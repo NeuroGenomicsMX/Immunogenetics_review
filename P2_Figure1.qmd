@@ -1,0 +1,603 @@
+# Figure 1: General overview of the data 
+## STEP 1: Load packages
+> Author: Ana Laura Hernández-Ledesma
+> Contributions: Evelia Coss
+> Date: Oct. 2025
+
+```{r Load_libraries, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(ggrepel) #prevents text to overlap
+library(dplyr)
+library(sf)
+library(spData) #install.packages("spDataLarge",repos = "https://nowosad.github.io/drat/", type = "source")
+library(ggmap)
+library(reshape2)
+library(mapdeck) #install.packages("mapdeck") ## to recover capitals coordinates
+library(scatterpie) #install.packages("scatterpie") ## For scatterpie plots in the map
+library(ggnewscale)
+library(cowplot) # Join plots
+```
+
+```{r Set palettes}
+# Set the color palette for ancestries, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
+ancestry_pal  <- c(   "#b30000", "#f46d43", "#fee090", "#3f007d","#addd8e","#238443", "#80cdc1", "#de77ae")
+names(ancestry_pal) <- c("AFR",     "As",      "EUR",     "ME",   "LA/NAd",  "NA",      "O",     "Other")
+scales::show_col(ancestry_pal) 
+
+# Set the color palette for continents, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
+continent_pal  <- c(     "#b30000", "#f46d43", "#fee090",  "#78c679",     "#80cdc1",   "#41ab5d")
+names(continent_pal) <- c("Africa",   "Asia",  "Europe", "South America", "Oceania", "North America")
+scales::show_col(continent_pal)
+
+# Set the color palette for types of immune response, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
+immune_response_pal  <- c(         "#92c5de",           "#f4a582",            "#a6dba0",                 "#b2abd2")
+names(immune_response_pal) <- c("Innate response", "Adaptive response", "Antigen presentation", "Proinflammatory markers")
+scales::show_col(immune_response_pal)
+
+# Set the color palette for specific sub-ancestries, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
+ancestries_palette  <- c(
+   "#b30000", "#b2182b",
+   "#d7301f","#f46d43","#f16913", "#fd8d3c", "#feb24c",
+   "#fee090",
+   "#3f007d","#54278f", "#54278f", "#6a51a3","#8073ac","#807dba","#8c96c6","#9e9ac8","#bcbddc", "#d8daeb","#efedf5",    
+   "#addd8e",
+   "#238443",
+   "#80cdc1",
+   "#de77ae",
+   "#fee090","#f46d43", "#de77ae", "#b30000",   "#addd8e",   "#80cdc1",  "#3f007d",     "#41ab5d")
+
+names(ancestries_palette) <- c(
+  "AFR","AFR_Am",
+  "SSA",  "As", "As_S", "As_SE", "EA",
+  "EUR",
+  "ME", "As,EUR", "As,O", "AFR,EUR,As,LA/NAd","AFR,EUR,LA/NAd", "AFR,LA/NAd", "AFR,LA/NAd,As,EUR", "EUR,AFR","EUR,LA/NAd,AFR", "EUR,LA/NAd,As,AFR","GME",
+  "LA/NAd",
+  "NA",
+  "O",
+  "Other",
+  "Europe", "Asia", "NR", "Africa", "Latin America","Oceania","Multicenter","North America" )
+scales::show_col(ancestries_palette)
+
+```
+## STEP 2: Import data
+```{r ImportData}
+gwas_data <- read_tsv("~/Documents/R/Review/Immune_Response_db.tsv.gz")
+head(gwas_data)
+dim(gwas_data)
+
+ancestries_p <- gwas_data %>%
+  filter(general_ancestry=="NA")
+```
+
+## STEP 3: Figure 1a. Geographic distribution of the studies and frequency of reported  ancestries 
+### Preparing the information regarding country of recruitment 
+```{r recruitment}
+recruitment <- gwas_data %>%
+  # Select columns
+   select(`COUNTRY OF RECRUITMENT`, `COUNTRY OF ORIGIN`, general_ancestry, recruitment_cont) %>%
+  # Number of volunteers
+  count(`COUNTRY OF RECRUITMENT`, `COUNTRY OF ORIGIN`, general_ancestry, recruitment_cont)
+
+# Separate countries in columns
+recruitment <- separate_wider_delim(recruitment, 
+                       cols= `COUNTRY OF RECRUITMENT`,
+                       delim = ",", 
+                       names_sep = "", 
+                       too_many = "debug",
+                       too_few = "align_start")
+# Select columns
+recruitment <- recruitment %>%
+  select( -`COUNTRY OF RECRUITMENTCOUNTRY OF RECRUITMENT`, -`COUNTRY OF RECRUITMENTCOUNTRY OF RECRUITMENTpieces`, -`COUNTRY OF RECRUITMENTCOUNTRY OF RECRUITMENTremainder`, -`COUNTRY OF RECRUITMENTCOUNTRY OF RECRUITMENTok` )
+
+head(recruitment)[1:5]
+```
+
+### Selecting and plotting map for frequency and type of study
+```{r world example}
+data(world) ## in-build data set part of the spData package
+plot(world["continent"], reset = FALSE)
+```
+
+### Extract countries from the database world
+```{r Obtain Regions for mapping}
+# -------- 1) Obtain Countries ---------------
+regions <- data.frame(world$name_long, world$continent, world$subregion) ## mexico_departments 
+regions$world.name_long <- as.factor(regions$world.name_long)
+regions <-regions %>%
+  rename(Country=world.name_long, Continent = world.continent, Subregion = world.subregion)
+
+# Create an empty list to store the data
+recruitment_list <- list()
+
+# Create a loop for processing COUNTRY OF RECRUITMENT columns
+for (i in 1:16) {
+  recruitment_list[[i]] <- recruitment %>% 
+    select(
+      !!sym(paste0("COUNTRY OF RECRUITMENT", i)), 
+      general_ancestry, 
+      recruitment_cont
+    ) %>% 
+    rename(COUNTRY = !!sym(paste0("COUNTRY OF RECRUITMENT", i)))
+}
+
+# Merge all dataframes in the list into a single one
+recruitment_all <- bind_rows(recruitment_list)
+
+# -------- 2) Prepare data for the plot ---------------
+# Create a replacement vector with the necessary corrections for country names
+country_replacements <- c(
+  "Iran (Islamic Republic of)" = "Iran",
+  "U.K." = "United Kingdom", 
+  " U.K." = "United Kingdom", 
+  "U.S." = "United States", 
+  " U.S." = "United States", 
+  " Hong Kong SAR"="Hong Kong SAR",
+  " Canada" = "Canada",
+  " Belgium" = "Belgium",
+  " China" = "China",  
+  " Croatia" = "Croatia",
+  " Denmark" = "Denmark",
+  " Estonia" = "Estonia",
+  " Finland" = "Finland",
+  " France" = "France",
+  " Germany" = "Germany",
+  " Greece" = "Greece",
+  " Italy" = "Italy",
+  " Japan" = "Japan",
+  " Netherlands" = "Netherlands",
+  " Uganda" = "Uganda",
+  " Iceland" = "Iceland",
+  " Poland" = "Poland",
+  " NR" = "NR",
+  " Republic of Korea" = "Republic of Korea",
+  " Singapore" = "Singapore",
+  " Sweden" = "Sweden",
+  " Taiwan" = "Taiwan",
+  " Australia" = "Australia",
+  " Austria" = "Austria",
+  " Brazil" = "Brazil",
+  " Costa Rica" = "Costa Rica",
+  " Czech Republic" = "Czech Republic",
+  " Hungary" = "Hungary",
+  " Kenya" = "Kenya",
+  " Lithuania" = "Lithuania",
+  " New Zealand" = "New Zealand",
+  " Niger" = "Niger",
+  " Nigeria" = "Nigeria",
+  " Norway" = "Norway",
+  " Peru" = "Peru",
+  " Republic of Ireland" = "Ireland",
+  " Slovenia" = "Slovenia",
+  " South Africa" = "South Africa",
+  " Spain" = "Spain",
+  " Switzerland" = "Switzerland",
+  " Turkey" = "Turkey"
+)
+
+# Apply substitutions using dplyr
+data <- recruitment_all %>%
+  na.omit() %>%
+  rename(Country = COUNTRY) %>%
+  mutate(Country = recode(Country, !!!country_replacements)) %>%
+  count(Country)
+
+recruitment_all <- recruitment_all %>%
+  na.omit() %>%
+  rename(Country = COUNTRY) %>%
+  mutate(Country = recode(Country, !!!country_replacements))
+
+# Results
+data
+```
+### Join the databases
+```{r plot construction}
+# -------- 3) Join databases by country and plot ---------------
+
+#Preview map plot
+regions <- regions %>%
+  dplyr::left_join(y=data, by = "Country")
+
+# Convert foreign object to an sf object
+sf_data <- st_as_sf(world) ## aquí van las coordenadas
+sf_data <- sf_data %>% 
+  rename(Country = name_long)
+# View(sf_data)
+
+sf_data_studies <- sf_data %>% #data for graphic
+  left_join(y = regions, by = "Country")
+# View(sf_data_studies)
+
+##Plotting
+worldmap <- sf_data_studies %>% 
+  ggplot(mapping = aes(fill = n)) +
+  geom_sf() +
+  scale_fill_gradientn(colours=c("#deebf7", "#6baed6"),
+                         na.value = "grey100",
+                       limits = c(1, 60))+ # Adjust the limit values
+  labs(title = "Immunogenetics studies in underrepresented populations",
+       fill = "Number of studies") + 
+  theme_void() + # eliminate axes
+  theme(plot.title = element_text(hjust = 0.5))
+
+### Scatterpie for ancestries contribution
+##Select data
+data_sp <- recruitment_all 
+
+## Counting frequencies
+data_sp <- data_sp %>%
+  count(Country, general_ancestry) %>%
+  rename(Freq= n) ##mexico_b
+
+## Estimate frequencies by country
+sp_ancestry <- dcast(data_sp, Country ~ general_ancestry, value.var = "Freq")
+
+sf_ancestry <- sf_data_studies %>% #data for graphic
+  left_join(y = sp_ancestry, by = "Country")
+# View(sf_ancestry)
+
+## Add coordinates
+capitals_coordinates <- capitals %>% 
+  rename(Country =country)
+
+#write_csv(capitals_coordinates, "~/Documents/R/Review/capitals.csv")
+capitals_coordinates <-  read_csv("~/Documents/R/Review/capitals.csv")
+
+capitals_coordinates <- capitals_coordinates %>%
+  left_join(y= sf_ancestry, by ="Country")
+
+# View(capitals_coordinates)
+
+##Setting na's as 0 before plotting
+ancestry_capital <- capitals_coordinates %>%
+  select(Country, lat, lon, Continent, n, "AFR","As","EUR","ME", "LA/NAd","NA","O","Other" ) %>%
+  mutate(across(where(is.numeric), ~replace_na(. , 0)))  # Change NAs to 0 in numeric columns
+
+## Plotting map and scatterpie 
+# Scatter plots
+#Preview scatterpies with ancestries proportions
+ggplot()+
+  geom_scatterpie(aes(x=lon, y=lat), 
+                  data=ancestry_capital, 
+                  cols= c("AFR","As","EUR","ME", "LA/NAd", "NA","O","Other"))+
+  scale_fill_manual(values = ancestry_pal)+
+  theme_minimal()+
+  theme(legend.position = 'bottom')
+
+##Bind map and scatterpies
+ggplot() +
+  geom_scatterpie(aes(x=lon, y=lat), 
+                  data=ancestry_capital, 
+                  cols= c("AFR","As","EUR","ME", "LA/NAd","NA","O","Other"),
+                  pie_scale = 0.9,
+                  legend_name = "Ancestry",
+                  linewidth=0.2)+
+  scale_fill_manual(values = ancestry_pal)+
+  theme_minimal()+
+  theme(legend.key.size = unit(0.3,'cm'),
+        legend.position = 'bottom',
+        legend.title = element_text(size=8),
+        legend.text = element_text(size=8))+
+    labs(title = "Immunogenetics studies in underrepresented populations",
+       fill = "Number of studies") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+sf_data_studies$n[is.na(sf_data_studies$n)] <- 0 ##changing NAs to 0
+sf_data_studies$n <- as.numeric(sf_data_studies$n)
+# class(sf_data_studies$n) # numeric
+
+#Plotting number of studies, ancestries and geographic distribution
+fig1a <- ggplot() +
+  geom_sf(data= sf_data_studies, aes(fill = n)) +
+  scale_fill_gradientn(colours=c("#deebf7", "#6baed6"),
+                         na.value = "grey100",
+                       limits = c(1, 50))+ # Adjust the limit values
+  new_scale_fill()+ ## to assign a new color scale 
+  geom_scatterpie(aes(x=lon, y=lat),
+                  data=ancestry_capital, 
+                  cols= c("AFR","As","EUR","ME","LA/NAd","NA","O","Other"),
+                   pie_scale = 0.5,
+                  linewidth=0.2,
+                  alpha=0.5)+
+  scale_fill_manual(values = ancestry_pal)+
+  theme_minimal()+
+  theme(legend.key.size = unit(0.2,'cm'),
+        legend.position = "inside",
+        legend.position.inside = c(0.10,0.45),
+        legend.title = element_text(size=8, hjust = 0.5, face = "bold"),
+        legend.text = element_text(size=8),
+        theme(plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"),
+        plot.title = element_text(hjust = 0.9)))+
+  labs(title = "A. Geographic distribution of studies",
+       fill = "Ancestry")
+fig1a
+
+# Save plot
+ggsave(filename= "Figures/Figure_1_map.png", plot= fig1a, width = 11, height = 8, dpi=300, units = "in", bg = "white" )
+
+```
+
+## STEP 4: Figure 1b. Analysis of reported ancestries by geographic region of recruitmen
+```{r Descriptive analysis of the recruitment and ancestries}
+# Select data
+studies_desc <- sf_data_studies %>%
+  select(Country, Continent,n) %>%
+  filter(n>=1)
+sum(sf_data_studies$n) #370
+
+##Count by continent of recruitment
+studies_continent <- sf_data_studies %>%
+  group_by(Continent) %>%
+  summarise(suma = sum(n, na.rm=TRUE),
+            .groups="drop")
+continent_sum<- sum(studies_continent$suma)
+
+## Calculate percentages
+studies_continent <- studies_continent %>% 
+ mutate(percentage = round(((suma*100)/continent_sum)))
+
+##Count by country of recruitment
+studies_country <- sf_data_studies %>%
+  group_by(Country) %>%
+  summarise(suma = sum(n, na.rm=TRUE),
+            .groups="drop")
+
+country_sum<- sum(studies_country$suma)
+
+## Calculate percentages
+studies_country <- studies_country%>% 
+ mutate(percentage = round(((suma*100)/country_sum)))
+
+### ancestries by continent and 
+ancestry_capital <- ancestry_capital%>% 
+    mutate(
+    Continent = case_when(
+      Country == "Mexico" ~ "Latin America",  ## To consider Mexico as Latin America rather than North America  
+      Country == "Costa Rica" ~ "Latin America", ## To consider CR as Latin America rather than North America
+      Continent == "South America" ~ "Latin America",
+      TRUE ~ Continent
+    )
+  )
+studies_ancestries <- ancestry_capital%>% 
+  select(Continent, n, AFR, As, EUR, ME, "LA/NAd", "NA", O, Other)%>%
+  filter(n>=1) # To keep only studies with reported ancestries
+
+total_ancs <- sum(studies_ancestries$n)
+
+total_ancestries <- studies_ancestries %>%
+  select(-Continent, -n)
+ 
+ancs_sum <- colSums(total_ancestries, na.rm = TRUE)
+
+# Convert into tibble 
+ancs_sum_df <- as_tibble(as.list(ancs_sum))
+
+anc_perc_df <- ancs_sum_df %>%
+    rename(LA_NAd = `LA/NAd`,NA_col = `NA`) %>%
+  mutate(
+    AFR_pct=AFR / total_ancs * 100,
+    As_pct=As  / total_ancs * 100,
+    EUR_pct=EUR / total_ancs * 100,
+    ME_pct=ME / total_ancs * 100,
+    LA_NAd_pct= LA_NAd/ total_ancs * 100,
+    NA_pct= NA_col/ total_ancs * 100,
+    O_pct=O/total_ancs * 100
+  )
+
+##Count of ancestry by continent of recruitment
+studies2 <- studies_ancestries %>%
+  rename(
+    LA_NAd = `LA/NAd`, 
+    NA_col = `NA`
+  )
+
+ancestries_continent <- studies2 %>%
+  group_by(Continent) %>%
+  summarise(
+    across(c(AFR, As, EUR, ME, LA_NAd, NA_col),
+           ~ sum(.x, na.rm = TRUE),
+           .names = "{.col}_sum"),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    total = rowSums(across(ends_with("_sum"))),
+    # calcular porcentaje solo si total > 0
+    AFR_pct   = if_else(total > 0, AFR_sum / total * 100, NA_real_),
+    As_pct    = if_else(total > 0, As_sum / total * 100, NA_real_),
+    EUR_pct   = if_else(total > 0, EUR_sum / total * 100, NA_real_),
+    ME_pct    = if_else(total > 0, ME_sum / total * 100, NA_real_),
+    LA_NAd_pct= if_else(total > 0, LA_NAd_sum / total * 100, NA_real_),
+    NA_pct    = if_else(total > 0, NA_col_sum / total * 100, NA_real_)
+  )
+
+# Pivot to long, group and calculate percentages
+percentages_by_continent <- studies2 %>%
+  pivot_longer(
+    cols = c(AFR, EUR, As, ME, LA_NAd, NA_col),
+    names_to = "Ancestry",
+    values_to = "Count"
+  ) %>%
+  group_by(Continent, Ancestry) %>%
+  summarise(
+    sum_count = sum(Count, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  group_by(Ancestry) %>%
+  mutate(
+    total = sum(sum_count),
+    pct = if_else(total > 0, sum_count / total * 100, NA_real_)
+  ) %>%
+  ungroup()
+
+```
+
+## Create plot
+```{r Plot ancestries by geographic region}
+# Select data
+gwas_rec <- gwas_desc %>% 
+  select(year, PUBMEDID, recruitment_cont, general_ancestry, `BROAD ANCESTRAL CATEGORY`)%>% 
+  unique()
+
+gwas_rec_studies <- gwas_rec %>% 
+  mutate(group = (if_else(`BROAD ANCESTRAL CATEGORY` == "European", "European", "Non-European")))
+
+gwas_rec_studies <- gwas_rec_studies %>%
+  mutate(
+    year = as.numeric(year), 
+    group = factor(group))
+
+gwas_rec_studies <- gwas_rec_studies %>% 
+  count(group, general_ancestry, recruitment_cont,year )
+
+# Create variable to separate columns
+gwas_rec_2 <- gwas_rec_studies  %>%
+  mutate(x_pos = ifelse(group == "European", as.numeric(factor(year)) - 0.15,
+                        as.numeric(factor(year)) + 0.15))
+cont_groups <- gwas_rec_2  %>%
+  select(recruitment_cont) %>%
+  group_by(recruitment_cont) %>%
+  count()
+
+gwas_rec_2 <- gwas_rec_2  %>%
+  mutate(recruitment_cont = replace(recruitment_cont, recruitment_cont == "Europe-Asia", "Multicenter")) %>%
+  mutate(recruitment_cont = replace(recruitment_cont, recruitment_cont == "Europe-Asia-North America", "Multicenter")) %>%
+  mutate(recruitment_cont = replace(recruitment_cont, recruitment_cont == "Europe-North America", "Multicenter")) %>%
+  mutate(recruitment_cont = replace(recruitment_cont, recruitment_cont == "Europe-Oceania", "Multicenter")) %>%
+  mutate(recruitment_cont = replace(recruitment_cont, recruitment_cont == "Europe-Oceania-North America", "Multicenter")) %>%
+  mutate(recruitment_cont = replace(recruitment_cont, recruitment_cont == "North America-Latin America-Europe", "Multicenter")) %>%
+  mutate(recruitment_cont = replace(recruitment_cont, recruitment_cont == "Russian Federation", "Multicenter"))%>%
+  filter(recruitment_cont != "No reported")
+
+studies_ancestries_pct<- ancestries_continent %>%
+  select(Continent, "AFR_pct","As_pct","EUR_pct","ME_pct","LA_NAd_pct","NA_pct" )%>%
+  mutate(Continent = replace(Continent, Continent == "North America", "North\n America"))%>%
+  mutate(Continent = replace(Continent, Continent == "Latin America", "Latin\n America"))
+
+df_long <- studies_ancestries_pct %>%
+  pivot_longer(cols = ends_with("pct"), 
+               names_to = "Ancestry", 
+               values_to = "Percentage")
+
+df_long <- df_long %>%
+   mutate(Ancestry = replace(Ancestry, Ancestry== "AFR_pct", "AFR"))%>%
+   mutate(Ancestry = replace(Ancestry, Ancestry== "As_pct", "As"))%>%
+   mutate(Ancestry = replace(Ancestry, Ancestry== "EUR_pct", "EUR"))%>%
+   mutate(Ancestry = replace(Ancestry, Ancestry== "ME_pct", "ME"))%>%
+   mutate(Ancestry = replace(Ancestry, Ancestry== "LA_NAd_pct", "LA/NAd"))%>%
+   mutate(Ancestry = replace(Ancestry, Ancestry== "NA_pct", "NA"))
+
+## Plot proportion of ancestries reported by geographic region
+fig1b <-ggplot(df_long, aes(x = Continent, y = Percentage, fill = Ancestry)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Ancestries distribution by region of recruitment",
+       x = "Geographic region",
+       y = "Percentage (%)") +
+  theme_minimal() + 
+  scale_fill_manual(values = ancestries_palette) +
+  labs(title = "B. Ancestries per region of recruitment",
+       x = "Region of recruitment", y = "Studies (%)",
+       fill = "Ancestries") +
+  theme(legend.position = "right",
+        legend.key.size = unit(0.5,'cm'),
+        plot.title = element_text(hjust = 0),
+        axis.text.x = element_text(size = 10),
+        axis.title.x = element_text(size = 10, face = "bold"), 
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 10, face = "bold"))
+fig1b
+```
+
+## STEP 5: Figure 1c. Analysis through time of studies associated with European and non-European ancestries
+```{r Time analysis of reported ancestries in the included studies}
+# Select data
+gwas_desc <- gwas_data %>% 
+  select(DATE, PUBMEDID, `DISEASE/TRAIT`, `BROAD ANCESTRAL CATEGORY`, `COUNTRY OF ORIGIN`, `COUNTRY OF RECRUITMENT`, SNPS, sp_ancestry, recruitment_cont, response, Global_response, sp_ancestry, general_ancestry)
+
+# Recover year of the GWAS
+gwas_desc$date <- as.Date(gwas_desc$DATE, format = "%Y/%m/%d")
+gwas_desc$year <- format(gwas_desc$date, "%Y")
+
+# Keep only unique GWAS
+gwas_anc <- gwas_desc %>% 
+  select(year, PUBMEDID, `BROAD ANCESTRAL CATEGORY`, recruitment_cont,sp_ancestry, general_ancestry)%>% 
+  unique()
+
+gwas_anc_studies <- gwas_anc %>% 
+  select(PUBMEDID)%>% 
+  unique()
+
+# Group in European vs non-European
+gwas_anc <- gwas_anc %>% 
+  mutate(group = (if_else(`BROAD ANCESTRAL CATEGORY` == "European", "European", "Non-European")))
+
+gwas_anc <- gwas_anc %>%
+  mutate(
+    year = as.numeric(year), 
+    group = factor(group))
+
+gwas_anc_2 <- gwas_anc %>% 
+  count(year, group, general_ancestry)
+
+# Variable to separate bars
+gwas_anc_3 <- gwas_anc_2 %>%
+  mutate(x_pos = ifelse(group == "European", as.numeric(factor(year)) - 0.15,
+                        as.numeric(factor(year)) + 0.15))
+
+# Plot Studies by ancestry by year
+fig1c <- ggplot() +
+  # Europeans (simple bar)
+  geom_col(data = gwas_anc_3 %>% filter(group == "European"),
+           aes(x = x_pos, y = n),
+           colour = "#bdbdbd",
+           fill = "#fee090",
+           alpha = 0.6,
+           width = 0.4) +
+  # Non-Europeans (stacked bar)
+  geom_col(data = gwas_anc_3 %>% filter(group == "Non-European"),
+           aes(x = x_pos, y = n, fill = general_ancestry),
+           alpha = 0.8,
+           width = 0.4) +
+  scale_fill_manual(values = ancestries_palette) +
+  scale_x_continuous(breaks = 1:length(unique(gwas_anc_3$year)),
+                     labels = unique(gwas_anc_3$year)) +
+  labs(title = "C. Studies per year: Europeans vs Non-Europeans",
+       x = "Year", y = "Number of studies",
+       fill = "Sub-ancestries (Non-Europeans)") +
+  theme_minimal()+
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = .5),
+        axis.text.x = element_text(size = 10, angle = 90),
+        axis.title = element_text(size = 10, face = "bold"), 
+        axis.text.y = element_text(size = 8, , face = "bold"))
+fig1c
+
+# Join plots b and c
+fig1bc <- plot_grid(  
+  fig1b,fig1c, 
+  labels = c("",""),
+  ncol=2,
+  rel_widths = c(1.2, 1),
+  panel_spacing= unit(0.5, "cm"),
+  label_size = 20, 
+  label_fontface = "bold",
+  label_colour = "black")
+fig1bc
+
+# Save plot
+ggsave(filename= "Figures/Figure_1bc.png", plot= fig1bc, width = 10, height = 5, dpi=300, units = "in", bg = "white" )
+
+# Join final figure 
+fig1 <- plot_grid(  
+  fig1a, fig1bc,
+  labels = c("",""),
+  ncol=1,
+  rel_heights = c(1.7, 2),
+  panel_spacing= unit(0.2, "cm"))
+fig1
+
+# Save plot
+ggsave(filename= "Figures/Figure_1.pdf", plot= fig1, width = 10, height = 15, dpi=300, units = "in", bg = "white" )
+
+```
+
+
+

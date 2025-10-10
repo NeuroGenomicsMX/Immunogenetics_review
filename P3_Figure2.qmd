@@ -1,0 +1,397 @@
+# Figure 2: General overview of the immune response-associated traits and genetic context 
+
+> Author: Ana Laura Hernández-Ledesma
+> Contributions: Evelia Coss
+> Date: Oct 2025
+
+## STEP 1: Load packages
+```{r Load_libraries, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(ggrepel) #prevents text to overlap
+library(dplyr)
+library(sf)
+library(spData) #install.packages("spDataLarge",repos = "https://nowosad.github.io/drat/", type = "source")
+library(reshape2)
+library(ggnewscale)
+library(ggsankey) # devtools::install_github("davidsjoberg/ggsankey")
+library(cowplot) # Join plots
+library(ggbreak)
+```
+
+```{r Set palettes}
+# Set the color palette for ancestries, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
+ancestry_pal  <- c(   "#b30000", "#f46d43", "#fee090", "#3f007d","#addd8e","#238443", "#80cdc1", "#de77ae")
+names(ancestry_pal) <- c("AFR",     "As",      "EUR",     "ME",   "LA/NAd",  "NA",      "O",     "Other")
+scales::show_col(ancestry_pal) 
+
+# Set the color palette for continents, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
+continent_pal  <- c(     "#b30000", "#f46d43", "#fee090",  "#78c679",     "#80cdc1",   "#41ab5d")
+names(continent_pal) <- c("Africa",   "Asia",  "Europe", "South America", "Oceania", "North America")
+scales::show_col(continent_pal)
+
+# Set the color palette for types of immune response, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
+immune_response_pal  <- c(         "#92c5de",           "#f4a582",            "#a6dba0",                 "#b2abd2")
+names(immune_response_pal) <- c("Innate response", "Adaptive response", "Antigen presentation", "Proinflammatory markers")
+scales::show_col(immune_response_pal)
+
+# Set the color palette for specific sub-ancestries, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
+ancestries_palette  <- c(
+   "#b30000", "#b2182b",
+   "#d7301f","#f46d43","#f16913", "#fd8d3c", "#feb24c",
+   "#fee090",
+   "#3f007d","#54278f", "#54278f", "#6a51a3","#8073ac","#807dba","#8c96c6","#9e9ac8","#bcbddc", "#d8daeb","#efedf5",    
+   "#addd8e",
+   "#238443",
+   "#80cdc1",
+   "#de77ae",
+   "#fee090","#f46d43", "#de77ae", "#b30000",   "#addd8e",   "#80cdc1",  "#3f007d",     "#41ab5d")
+
+names(ancestries_palette) <- c(
+  "AFR","AFR_Am",
+  "SSA",  "As", "As_S", "As_SE", "EA",
+  "EUR",
+  "ME", "As,EUR", "As,O", "AFR,EUR,As,LA/NAd","AFR,EUR,LA/NAd", "AFR,LA/NAd", "AFR,LA/NAd,As,EUR", "EUR,AFR","EUR,LA/NAd,AFR", "EUR,LA/NAd,As,AFR","GME",
+  "LA/NAd",
+  "NA",
+  "Oceanian",
+  "Other",
+  "Europe", "Asia", "NR", "Africa", "Latin America","Oceania","Multicenter","North America" )
+scales::show_col(ancestries_palette) 
+
+# Set the color palette for specific genetic context, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
+context_pal <- c( "#deebf7", "#c6dbef","#9ecae1","#6baed6","#4292c6", "#08519c")
+names(context_pal) <- c( "Functional Variants","Intergenic Regions","Intron Variants",
+                               "Regulatory Regions","Splicing Variants","UTR Variants")
+scales::show_col(context_pal)
+```
+
+## STEP 2: Import data
+```{r ImportData, warning=FALSE, message=FALSE}
+gwas_data <- read_tsv("~/Documents/R/Review/Immune_Response_db.tsv.gz")
+head(gwas_data)
+dim(gwas_data)
+```
+
+## STEP 3: Figure 2a. Studies and ancestries reported in non-Europeans through time
+```{r Descriptive analysis of the immune associated traits}
+###SELECTING & FILTERING INNATE RESPONSE ASSOCIATED TRAITS
+gwas_data <- gwas_data %>% 
+    mutate(response_type= recode(
+    response, 
+    "Basophil"="Innate response",
+    "Eosinophil"="Innate response",
+    "Macrophage"="Innate response",
+    "Mast cells"="Innate response",
+    "Monocyte"="Innate response",
+    "NK"="Innate response",
+    "Neutrophil"="Innate response",
+    "Pattern recognition"="Innate response",
+    "Physical Barriers"="Innate response",
+    "Complement"="Innate response",
+    "Growth factors"="Innate response",
+    "Coagulation cascade"="Innate response",
+    "Adhesion molecules"="Innate response",
+    "Inflammatory mediators"="Innate response",
+    "Leukocytes"="Innate response",
+    "CRP"="Proinflammatory markers",
+    "IL-1"="Proinflammatory markers",
+    "IL-6"="Proinflammatory markers",
+    "IL-12"="Proinflammatory markers",
+    "IL-18"="Proinflammatory markers",
+    "TNF"="Proinflammatory markers",
+    "IFN"="Proinflammatory markers",
+    "Chemiokines"="Proinflammatory markers",
+    "HLA"="Antigen presentation",
+    "DCs"="Antigen presentation",
+    "Antibodies"="Adaptive response",
+    "B cells"="Adaptive response",
+    "T cells"="Adaptive response",
+    .default = "No reported"))
+
+gwas_noneur<- gwas_data %>%
+  select(DATE, SNPS, PUBMEDID, general_ancestry, sp_ancestry, response, Global_response, Variant_Consequences, response_type )%>%
+  unique()
+
+gwas_noneur$date <- as.Date(gwas_noneur$DATE, format = "%Y/%m/%d")
+gwas_noneur$year <- format(gwas_noneur$date, "%Y")
+
+gwas_noneur <- gwas_noneur %>%
+  mutate(
+    year = as.numeric(year))
+
+gwas_noneur2<- gwas_noneur %>% 
+  filter(sp_ancestry != "EUR")%>%
+  count(year, general_ancestry)
+
+fig2a <- ggplot(gwas_noneur2, aes(x = year, y=n, colour = general_ancestry, shape = general_ancestry)) +
+  geom_point(size = 5, alpha = 0.7) +
+  scale_colour_manual(values = ancestries_palette) +
+  scale_shape_manual(values = c(16, 17, 15, 10, 7, 16, 18))+
+  scale_x_continuous(breaks = seq(2005, 2025, by = 1))+
+  scale_y_continuous(breaks = seq(0, 2500, by =200))+
+  scale_y_break(c(700, 1200)) + 
+  scale_y_break(c(1300, 2000)) +
+  labs( x = "Year", y = "Reported SNPs",
+         title = "A. Reported variants by year across non-Europeans") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 12, hjust = 0.5),
+        legend.key.size = unit(0.2,'cm'),
+        legend.position = 'bottom',
+        legend.title = element_blank(),
+        legend.text = element_text(size=8),
+        axis.text.x = element_text(size = 8, angle = 90),
+        axis.title = element_text(size = 8, face = "bold"), 
+        axis.text.y = element_text(size = 8))+
+    guides(colour = guide_legend(nrow = 1, byrow = TRUE),
+    shape = guide_legend(nrow = 1, byrow = TRUE))
+fig2a
+
+```
+## STEP 5:  Figure 2b. Types of biological context of the studied variants
+```{r Estimation of the biological context of the studied variants }
+gwas_noneur3<- gwas_noneur %>% 
+  filter(sp_ancestry != "EUR")%>%
+  count(sp_ancestry)
+
+snps_total<- sum(gwas_noneur3$n)
+
+anc_noneur <- gwas_noneur3 %>% 
+ mutate(percentage = round(((n*100)/snps_total)))
+
+anc_noneur <- anc_noneur %>%
+  group_by(sp_ancestry) %>%
+  summarise(total_n = sum(n)) %>%
+  mutate(percentage = total_n / sum(total_n) * 100,
+         label = paste0(round(percentage, 1), "%"))
+
+anc_noneur <- anc_noneur %>%
+  filter(label != "0%")
+
+fig2b <-  ggplot(anc_noneur, aes(x = reorder(sp_ancestry, +percentage), y = percentage))+
+  geom_bar(stat = "identity",fill = "#d9d9d9")+
+  geom_text(aes(label = label), size = 3) +
+  coord_flip()+
+  labs(y = "Percentage (%)", 
+       fill = "",
+       x = "Reported ancestry",
+       title = "B. Frequency of ancestries reported \namong non-European variants")+
+  theme_minimal()+
+  theme(theme(plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"),
+        plot.title = element_text(size = 12, hjust = 0.5)),
+        plot.margin = margin(2, 2, 30, 5, unit = "pt"),  #t, r, b, l
+        axis.text.y = element_text(size = 8),
+        axis.title.y = element_blank(),
+        axis.title.x.bottom  = element_text(size = 8, face = "bold"),
+        axis.text.x = element_text(size = 8, hjust=1),
+        axis.title.x = element_blank())
+fig2b
+```
+
+## STEP 4:  Figure 2c. Immune-associated traits with the GWAS
+```{r Immune-associated traits with the GWAS}
+# Count frequency for type of immune response
+immune_response <- gwas_data %>% 
+  count(response, response_type)
+
+# Calculate percentage
+immune_total <- sum(immune_response$n)
+immune_total
+immune_perc <- gwas_data %>% 
+  count(response_type)%>% 
+  mutate(immune_cont = 100 * n/ sum(immune_total))
+
+#Plot of frequencies of immune response-associated traits with SNPs
+fig2c <- ggplot2::ggplot(immune_response,aes(area=n,fill=response_type, 
+                       label=response,subgroup=response_type))+ 
+  treemapify::geom_treemap(layout="squarified")+ 
+  scale_fill_manual(values = immune_response_pal)+
+  geom_treemap_subgroup_text(place = "centre", grow = TRUE,
+                             colour = "white",
+                             fontface = "italic")+
+   geom_treemap_subgroup_border(colour = "white", size = 3) +
+   geom_treemap_text(colour = "lightgrey", place = "centre",
+                    size = 15, grow = TRUE)+
+  labs(title="C. Immuno-associated traits reported \n among non-European variants")+ 
+  theme(plot.title = element_text(size = 12, hjust = 0.5),
+        legend.position="none",
+        legend.key.size = unit(0.2,'cm'),
+        legend.title = element_blank(),
+        legend.text = element_text(size=8),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 8, face = "bold"),
+        axis.text.x = element_text(size =8),
+        plot.margin = margin(1, 1, 40, 10, unit = "pt")) #t, r, b, l
+fig2c
+
+```
+## STEP 5:  Figure 2d. Variants associated with immune traits
+```{r Estimation of the biological context of the studied variants }
+# Lollipop plot
+# Order of answers
+orden_response <- c(
+      # Adaptive
+      "Antibodies", "T cells", "B cells",
+      # Antigen presentation
+      "DCs", "HLA",
+      # Proinflammatory markers
+      "IL-1", "IL-6", "IL-12", "IL-18", "CRP", "TNF", "IFN", "Chemiokines",
+      # Innate response
+       "Neutrophil", "Monocyte", "Basophil",   "Physical Barriers", "Eosinophil", "NK",  
+       "Coagulation cascade", "Inflammatory mediators", "Complement", "Macrophage", "Adhesion molecules",  "Pattern recognition",  "Mast cells", "Leukocytes",  "Growth factors")
+
+gwas_response <- gwas_noneur %>%
+  # Count the number of individuals by overall response group and ancestry.
+  group_by(Global_response, response) %>% 
+  summarise(Total = n(), .groups = "drop") %>% # Distributions
+  ungroup() %>% # Remove final grouping to avoid problems in subsequent analysis
+  # Convert Global_response to factor with desired order
+  mutate(response = factor(response, levels = orden_response))
+  
+# Sort by Global_response and then by descending Total (or ascending if you prefer)
+gwas_response <- gwas_response %>%
+  arrange(Global_response, desc(Total)) %>%
+  mutate(response = factor(response, levels = unique(response)))
+
+fig2d <- ggplot(gwas_response,
+                        aes(x = Total, y = response, color = Global_response)) +
+  # lollipop lines
+  geom_segment(aes(x = 0, xend = Total, y = response, yend = response),linewidth = 1) +
+  # Lollipop point
+  geom_point(size = 4) +
+  scale_x_continuous(expand = c(0, 0), limits = c(0, 4100)) +
+  scale_color_manual(values = immune_response_pal) +
+  labs(x = "Number of \nVariants", y = "Sample type", color = "Immune \nResponse",
+       title = "D. Non-European variants by \nassociated immune trait ")+
+  theme_minimal() +
+  guides(fill = guide_legend(ncol = 1))+
+  theme(
+    legend.position = "none",  
+    legend.title = element_text(size = 8,  hjust=0.1 ),
+    plot.margin = margin(2, 2, 30, 5, unit = "pt"),  #t, r, b, l
+    axis.text.y = element_text(size = 8),
+    axis.title.y = element_blank(),
+    axis.title.x.bottom  = element_text(size = 8, face = "bold"),
+    axis.text.x = element_text(size = 8, hjust=1),
+    axis.title.x = element_blank(),
+    plot.title = element_text(size = 12, hjust = 0.9))
+fig2d
+```
+
+## STEP 5: Figure 2e. Variants by biological context
+```{r Descriptive analysis of the immune associated traits}
+context <- gwas_data %>% 
+  select(general_ancestry, CONTEXT,response_type)%>% 
+  mutate(context_type= recode(
+    CONTEXT,
+"3_prime_UTR_variant"= "UTR Variants",
+"5_prime_UTR_variant"="UTR Variants",
+"TF_binding_site_variant"="Functional Variants",
+"frameshift_variant"= "Functional Variants",
+"intergenic_variant"= "Intergenic Regions",
+"intron_variant"= "Intron Variants",
+"missense_variant"="Functional Variants",
+"regulatory_region_variant"="Regulatory Regions", 
+"splice_donor_variant"="Splicing Variants",
+"splice_region_variant"="Splicing Variants",
+"start_lost"="Functional Variants",
+"stop_gained"="Functional Variants",
+"synonymous_variant"= "Functional Variants",
+"inframe_deletion"="Functional Variants",
+"inframe_insertion"="Functional Variants",
+"intergenic_variant; intergenic_variant; intergenic_variant"="Intergenic Regions",
+"splice_donor_5th_base_variant"="Splicing Variants",
+"splice_donor_region_variant"="Splicing Variants",
+"splice_polypyrimidine_tract_variant"="Splicing Variants",
+"intron_variant; synonymous_variant; intron_variant"="Intron Variants",
+"splice_acceptor_variant"="Splicing Variants",
+"synonymous_variant; missense_variant"="Functional Variants",
+    .default = "No reported")) 
+
+context_types <- context %>% 
+  count(context_type, response_type)
+
+# Count frequency for genetic context
+context_perc <- context %>% 
+  count(context_type)
+
+# Calculate percentage
+context_total <- sum(context_perc$n)
+context_total
+
+context_perc <- context_perc %>% 
+  mutate(Perc_cont = 100 * n/ sum(context_total))
+
+# Plot
+fig2e <-ggplot(context_types, aes(x=context_type, y=n,fill=response_type))+
+  geom_bar(position = "stack", stat = "identity")+
+       labs(y = "Frequency (n)", 
+       fill = "")  +
+  scale_x_discrete(guide = guide_axis(n.dodge = 2))+
+  scale_fill_manual(values = immune_response_pal)+
+  labs(x = "Biological context", y = "Frequency (n)",
+       title = "E. Biological context of non-European variants")+
+  theme_minimal()+
+  theme(plot.title = element_text(size = 12, hjust = 0.5),
+        legend.position = "bottom",
+        legend.key.size = unit(0.35,'cm'),
+        legend.text = element_text(size=9),
+        axis.title = element_text(size = 8, face = "bold"),
+        axis.text.y = element_text(size =8),
+        axis.text.x = element_text(size =8),
+        axis.title.x = element_blank(),
+        plot.margin = margin(1, 1, 5, 10, unit = "pt")) #t, r, b, l
+fig2e
+
+# Extract legend
+legend_fig2e <- get_legend(fig2e) 
+
+fig2e2 <-ggplot(context_types, aes(x=context_type, y=n,fill=response_type))+
+  geom_bar(position = "stack", stat = "identity")+
+       labs(y = "Frequency (n)", 
+       fill = "")  +
+  scale_x_discrete(guide = guide_axis(n.dodge = 2))+
+  scale_fill_manual(values = immune_response_pal)+
+  labs(x = "Biological context", y = "Frequency (n)",
+       title = "E. Biological context of non-European variants")+
+  theme_minimal()+
+  theme(plot.title = element_text(size = 12, hjust = 0.5),
+        legend.position = "none",
+        legend.key.size = unit(0.35,'cm'),
+        legend.text = element_text(size=9),
+        axis.title = element_text(size = 8, face = "bold"),
+        axis.text.y = element_text(size =8),
+        axis.text.x = element_text(size =8),
+        axis.title.x = element_blank(),
+        plot.margin = margin(1, 1, 5, 10, unit = "pt")) #t, r, b, l
+fig2e2
+
+# Upper plots
+fig_up <- plot_grid(
+  fig2a, fig2b, 
+  labels = c("",""), 
+  ncol=2,
+  rel_widths = c(1,1))
+
+# Bottom plots
+fig_down <- plot_grid(
+  fig2c, fig2d, fig2e2,
+  labels = c("","",""), 
+  ncol=3,
+  rel_widths = c(0.8,1,1.2))
+
+# Bottom plots + legend
+fig_legend <- plot_grid(
+  fig_down, legend_fig2e,
+  labels = c("",""),
+  rel_heights = c(2,0.5),
+  ncol=1)
+
+# Figure 2
+fig2_B <- plot_grid(  
+  fig_up, fig_legend,
+  labels = c('',''), 
+  rel_heights = c(2,1.5),
+  ncol=1)
+
+ggsave(filename= "~/Documents/R/Review/Sept/Figures/Figure_2.pdf", plot= fig2_B, width = 11, height = 12, dpi=300, units = "in", bg = "white" )
+```

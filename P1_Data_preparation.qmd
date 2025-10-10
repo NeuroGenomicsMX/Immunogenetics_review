@@ -1,0 +1,2254 @@
+# Filter data
+> Author: Ana Laura Hernández-Ledesma
+> Contributions: Evelia Coss
+
+## STEP 1: Import data
+
+```{r ImportData, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(dplyr)
+
+# Ancestries data
+ancestryData <- read_tsv("data/original/gwas-catalog-v1.0.3.1-ancestries-r2025-02-08.tsv")
+dim(ancestryData) # 190865     17
+
+# All studies
+studiesData <- read_tsv("data/original/gwas-catalog-v1.0.3.1-studies-r2025-02-08.tsv")
+dim(studiesData) # 135194     25
+
+# All associations
+assoData <- read_tsv("data/original/gwas_catalog_v1.0.2-associations_e113_r2025-02-08.tsv")
+dim(assoData) # 775146     38
+
+```
+
+## STEP 2: Cleaning data
+
+Reduce the columns of the dataframe `ancestryData` to join the data with `assoData` through the `STUDY ACCESSION` column.
+
+```{r ancestryData_clean}
+ancestryData <- ancestryData %>% select(`STUDY ACCESSION`, `BROAD ANCESTRAL CATEGORY`, `COUNTRY OF ORIGIN`, `COUNTRY OF RECRUITMENT`, `NUMBER OF CASES`, `NUMBER OF CONTROLS`, `SAMPLE DESCRIPTION`)
+```
+
+Join data
+
+```{r}
+Complete_db <- left_join(assoData, ancestryData, by = "STUDY ACCESSION") 
+head(Complete_db)
+```
+
+Dimension
+
+```{r}
+dim(Complete_db)
+```
+
+Save (gzip compressed)
+
+```{r Complete_db save}
+write_tsv(Complete_db, "data/Complete_db.tsv.gz", quote = "none")
+Complete_db <-  read_tsv("~/Documents/R/Review/Complete_db.tsv")
+```
+
+## STEP 3: Identification of INNATE immune response associated traits
+
+### Selecting disease/trait associated with immune response
+
+Check the words
+
+```{r words}
+traits <- Complete_db %>%
+  select(`DISEASE/TRAIT`) %>%
+  distinct()
+head(traits)
+```
+
+```{r innate_words}
+### Generate df with only the disease/traits to visualize them and curate them 
+### SELECTING & FILTERING INNATE RESPONSE ASSOCIATED TRAITS
+  ## PHYSICAL EPITHELIAL BARRIER
+    # > Skin - Keywords "skin"
+skin_list <- c("Skin condition", "Rash and other nonspecific skin eruption (PheCode 687.1)", "Disorder of skin and subcutaneous tissue NO (PheCode 689)", "Degenerative skin conditions and other dermatoses (PheCode 702)", "Scar conditions and fibrosis of skin (PheCode 701.2)", "Other local infections of skin and subcutaneous tissue (PheCode 686)")
+
+skin_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% skin_list)
+
+    # > Gastrointestinal - Keywords "gastrointestinal"
+gastro_list <- c("Gastrointestinal infection", "Gastrointestinal issues (confirmatory factor analysis Factor 31)", "Asthma in gastrointestinal disease", "Hemorrhage from gastrointestinal ulcer (PheCode 531.1)", "Gastrointestinal complications (PheCode 569.2)", "Gastrointestinal hemorrhage (PheCode 578)")
+
+gastro_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% gastro_list)
+
+    # > Bowel - Keywords "bowel"
+bowel_list <- c("Inflammatory bowel disease", "Inflammatory bowel disease (early onset)", "Irritable bowel syndrome", "Irritable bowel syndrome (MTAG)", "ICD10 K50, K51: inflammatory bowel disease", "Irritable bowel syndrome mixed subtype", "B-cell lymphoblastic leukemia or inflammatory bowel disease (pleiotropy)", "Rheumatoid arthritis or irritable bowel disease")
+
+bowel_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% bowel_list)
+
+    # > Mucosas - Keywords "mucosa"
+mucosal_list <- c("Leukoplakia of oral mucosa (PheCode 528.6)", "Normal mucosa of esophagus-specific gene 1 protein levels (NMES1.6406.3.3)", "Normal mucosa of esophagus-specific gene 1 protein levels", "Mucosal addressin cell adhesion molecule 1 levels", "Stomatitis and mucositis (PheCode 528.1)")
+
+mucosal_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% mucosal_list)
+
+  ## PATTERN RECOGNITION
+    # > Toll-like receptors - Keywords "Toll-like receptor", "TLR"
+tlr_list <- c("Toll-like receptor 1 levels","Toll-like receptor 2 levels", "Toll-like receptor 3 levels", "Toll-like receptor 4 levels", "Toll-interacting protein levels (TOLLIP.13963.7.3)", "Toll-like receptor 4:Lymphocyte antigen 96 complex levels (TLR4.LY96.3647.49.4)", "Toll-interacting protein levels", "Toll-like receptor 4:Lymphocyte antigen 96 complex levels", "Toll-like receptor 5 levels", "Toll-like receptor 1:Extracellular domain levels","TLR4 interactor with leucine rich repeats levels", "TLR4:MD-2 complex level (CSF)","TLR4:MD-2 complex level (plasma)", "Serum levels of protein LY96;TLR4", "Serum levels of protein TLR2", "TLR4 interactor with leucine rich repeats:Extracellular domain levels", "TLR3 protein levels")
+
+tlr_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% tlr_list)
+
+    # > C-type lectin receptors - Keywords "C-tyype lectin"
+clr_list <- c("C-type lectin domain family 1 member B levels", "C-type lectin domain family 2 member L levels", "C-type lectin domain family 1 member A levels", "C-type lectin domain family 5 member A levels", "C-type lectin domain family 6 member A levels", "C-type lectin domain family 7 member A levels", "C-type lectin domain family 10 member A levels", "C-type lectin domain family 4 member D levels", "C-type lectin domain family 4 member G levels", "C-type lectin domain family 4 member C levels", "C-type lectin domain family 4 member M levels (CLEC4M.3030.3.2)", "C-type lectin domain family 5 member A levels (CLEC5A.8282.15.3)", "C-type lectin domain family 12 member A levels (CLEC12A.11187.11.3)", "C-type lectin domain family 2 member D levels (CLEC2D.7054.87.3)","C-type lectin domain family 4 member E levels (CLEC4E.7077.9.4)", "C-type lectin domain family 4 member K levels (CD207.3361.26.2)", "C-type lectin domain family 4 member A levels", "C-type lectin domain family 4 member M levels", "C-type lectin domain family 12 member A levels", "C-type lectin domain family 2 member A levels", "C-type lectin domain family 2 member D levels", "C-type lectin domain family 4 member G (analyte X10781.19) levels", "C-type lectin domain family 4 member K levels", "C-type lectin domain family 14 member A levels", "C-type lectin domain family 11 member A levels")
+
+clr_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% clr_list)
+
+    # > RIG-I like receptors - Keywords "RIG", "Retinoic acid-inducible gene 1 like receptors", 
+rig_list <- c("Antiviral innate immune response receptor RIG-I levels")
+  
+rig_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% rig_list)
+
+    # > Damage recognition - keywords "PAMP", "DAMP", "Pathogen associated molecular patterns", "Damage associated molecular patterns", "Heat shock protein", "Uric acid"
+damage_list <- c("High mobility group protein B1 levels (HMGB1.2524.56.3)", "Heat shock factor-binding protein 1 levels","Heat shock protein beta-6 levels","Heat shock 70 kDa protein 1A levels", "Heat shock-related 70 kDa protein 2 levels", "Heat shock protein beta-1 levels", "Activator of 90 kDa heat shock protein ATPase homolog 1 levels","Activator of 90 kDa heat shock protein ATPase homolog 1 levels (AHSA1.11633.89.3)", "Heat shock 70 kDa protein 1-like levels (HSPA1L.12041.33.3)", "Heat shock 70 kDa protein 6 levels (HSPA6.13672.3.3)",
+"Heat shock 70 kDa protein 6 levels", "Heat shock protein HSP 90-alpha/beta levels", "Heat shock protein HSP 90-beta levels", "Heat shock cognate 71 kDa protein levels", "Heat shock factor protein 1 levels", "Heat shock 70 kDa protein 13 levels", "Heat shock 70 kDa protein 1B levels", "Heat shock 70 kDa protein 1-like levels",
+"Heat shock 70 kDa protein 1A (analyte X4124.24) levels", "Heat shock 27 kDa protein levels", "Uric acid levels","Uric acid clearance", "Serum uric acid levels")
+
+damage_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% damage_list)
+
+  ## INFLAMMATION (This includes fever, leukocytes, leukocyte migration, vasodilatation )
+    # > Natural killer - keywords "Natural killer", "NK"
+nk_list <- c("Natural killer cells antigen CD94 levels", "Natural cytotoxicity triggering receptor 1 levels", "Natural cytotoxicity triggering receptor 3 ligand 1 levels", "Natural cytotoxicity triggering receptor 1 levels (NCR1.8360.169.3)", "Natural cytotoxicity triggering receptor 3 levels (NCR3.3003.29.2)", "Natural killer cell receptor 2B4 levels", "Natural cytotoxicity triggering receptor 3 levels", "Extranodal natural killer T-cell lymphoma (nasal type)", "Natural cytotoxicity triggering receptor 1 (analyte X5104.57) levels", "Natural cytotoxicity triggering receptor 1 (analyte X8360.169) levels", "CD45 on Natural Killer", "CD45 on Natural Killer T", "CD16-CD56 on Natural Killer T", "CD16-CD56 on Natural Killer", "CD16-CD56 on HLA DR+ Natural Killer", "Natural Killer T Absolute Count", "Natural Killer T %T cell", "Natural Killer %CD3- lymphocyte", "Natural Killer %lymphocyte", "HLA DR+ Natural Killer Absolute Count","HLA DR+ Natural Killer %Natural Killer", "HLA DR+ Natural Killer  %CD3- lymphocyte", "Natural Killer T %lymphocyte", "CD8+ Natural Killer T Absolute Count", "CD8+ Natural Killer T %T cell", "CD8+ Natural Killer T %lymphocyte","CD8dim Natural Killer T Absolute Count", "CD8dim Natural Killer T %T cell","CD8dim Natural Killer T %lymphocyte", "CD4-CD8- Natural Killer T Absolute Count", "CD4-CD8- Natural Killer T %T cell", "CD4-CD8- Natural Killer T %lymphocyte", "Natural Killer Absolute Count", "Natural cytotoxicity triggering receptor 2 levels") 
+
+nk_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% nk_list)
+
+    # > Inflammation (This includes fever, leukocytes, leukocyte migration, vasodilatation )
+inflammation_list <- c("Nitric oxide", "Reactive oxygen species", "ROS", "NOS",
+    "Exhaled nitric oxide output", "Exhaled nitric oxide levels","Fractional exhaled nitric oxide (childhood)","Nitric oxide synthase, inducible levels","Nitric oxide synthase, brain levels","Nitric oxide synthase, endothelial levels", "Fractional exhaled nitric oxide levels","Nitric oxide synthase, endothelial levels", 
+    
+    # > Leukocytes - keywords "Leukocyte"
+    "White blood cell leukocyte count (UKB data field 30000)", "Leukocyte Absolute Count", 
+    
+    # > Neutrophils - keywords "Neutrophil"
+    "Neutrophil count", "Sum neutrophil eosinophil counts", "Sum basophil neutrophil counts", "Neutrophil percentage of granulocytes", "Neutrophil percentage of white cells", "Neutrophil granulocyte count", "Plasma neutrophil extracellular trap levels", "Absolute neutrophil count",
+    
+    # > Basophils - keywords "Basophil"
+    "White blood cell count (basophil)","Sum basophil neutrophil counts","Basophil count","Basophil percentage of white cell", "Sum eosinophil basophil counts","Basophil percentage of granulocytes", "CD33 on basophil", "Basophil Absolute Count", "Basophil %CD33dim HLA DR- CD66b-", "CD11b on basophil",
+    
+    # > Monocytes - keywords "Monocyte"
+    "Monocyte chemoattractant protein-1 levels", "Monocyte count", "Monocyte early outgrowth colony forming units","Monocyte-lymphocyte ratio", "Monocyte percentage of white cells", "Monocyte percentage (UKB data field 30190)", "Monocyte count (UKB data field 30130)", "Lymphocyte-to-monocyte ratio","Endothelial monocyte-activating polypeptide 2 levels (AIMP1.2714.78.2)", "Monocyte chemoattractant protein-4 levels", "Endothelial monocyte-activating polypeptide 2 levels", "Monocyte differentiation antigen CD14, soluble levels","White blood cell count (monocyte)", "Monocyte chemoattractant protein-1 (red blood cell fatty acid level interaction)", "Monocyte differentiation antigen CD14 levels","Monocyte chemoattractant protein-3 levels","CD4 on monocyte","CD33 on CD14+ monocyte","CD45 on CD14+ monocyte","HLA DR++ monocyte %monocyte","HLA DR++ monocyte %leukocyte","HLA DR++ monocyte Absolute Count","CD16 on CD14- CD16+ monocyte","CD62L- monocyte Absolute Count","CD62L- monocyte %monocyte","CD11c+ CD62L- monocyte Absolute Count","CD11c+ HLA DR++ monocyte Absolute Count","CCR2 on monocyte","CD39 on monocyte","CD80 on monocyte", "CD14- CD16+ monocyte Absolute Count","CD14+ CD16+ monocyte Absolute Count","CD14+ CD16- monocyte Absolute Count","Monocyte Absolute Count","CD62L on monocyte","CD11c on monocyte","CD11b on CD14+ monocyte","CD86 on monocyte","CD40 on CD14+ CD16- monocyte","CD40 on CD14+ CD16+ monocyte","CCR2 on CD14- CD16+ monocyte", "CD14 on CD14+ CD16+ monocyte", "HLA DR on CD14- CD16+ monocyte","CD40 on monocytes","CD14 on CD14+ CD16- monocyte","CD64 on CD14+ CD16- monocyte","HLA DR on CD14+ CD16- monocyte","CD40 on CD14- CD16+ monocyte","CD64 on CD14- CD16+ monocyte", "HLA DR on CD14+ monocyte","CCR2 on CD14+ CD16+ monocyte", "PDL-1 on CD14+ CD16- monocyte", "CX3CR1 on monocyte","HLA DR on monocyte","CD64 on CD14+ CD16+ monocyte","CX3CR1 on CD14- CD16+ monocyte","CX3CR1 on CD14+ CD16+ monocyte","CX3CR1 on CD14+ CD16- monocyte","PDL-1 on CD14+ CD16+ monocyte", "PDL-1 on CD14- CD16+ monocyte", "PDL-1 on monocyte", "CCR2 on CD14+ CD16- monocyte", "CD16 on CD14+ CD16+ monocyte", "CD64 on monocyte", "HLA DR on CD14+ CD16+ monocyte", 
+    
+    # > Eosinophils - keywords "Eosinophil"
+    "Eosinophil counts","Sum neutrophil eosinophil counts", "Eosinophil percentage of granulocytes", "Eosinophil percentage of white cells", "Eosinophil cationic protein levels", "Eosinophill percentage (UKB data field 30210)","Eosinophill count (UKB data field 30150)","White blood cell count (eosinophil)","Sum eosinophil basophil counts", "Eosinophil cationic protein (analyte X15576.158) levels","Eosinophil cationic protein (analyte X5741.55) levels", "Eosinophil-derived neurotoxin levels","Eosinophil cationic protein levels and Eosinophil-derived neurotoxin levels","Eosinophilia (PheCode 288.3)",
+    
+    # > Mast cells - keywords "Mast cell"
+"Mast cell-expressed membrane protein 1 levels","Mast cell-expressed membrane protein 1 levels (MCEMP1.6283.60.3)",
+
+    # > Macrophages - keywords "Macrophage"
+"Macrophage receptor MARCO levels", "Macrophage Migration Inhibitory Factor levels","Macrophage scavenger receptor types I and II levels", "Macrophage mannose receptor 1 levels", "Macrophage metalloelastase levels", "Macrophage-capping protein levels", "Granulocyte-macrophage colony-stimulating factor receptor subunit alpha levels", "Granulocyte-macrophage colony-stimulating factor levels", "Macrophage colony-stimulating factor 1 levels", "Macrophage colony-stimulating factor 1 receptor levels", "Macrophage mannose receptor 1 levels (MRC1.2637.77.2)", "Macrophage metalloelastase levels (MMP12.4496.60.2)", "Macrophage migration inhibitory factor levels (MIF.5356.2.3)", "Macrophage inflammatory protein 1a levels", "Macrophage-stimulating protein receptor levels", "Macrophage inflammatory protein 1b levels", "Macrophage colony stimulating factor levels", "Macrophage colony-stimulating factor 1 receptor (analyte X2638.12) levels", "Macrophage receptor MARCO (analyte X20134.27) levels", "Macrophage scavenger receptor types I and II:Extracellular domain (analyte X15533.97) levels", "Macrophage scavenger receptor types I and II:Extracellular domain (analyte X11282.16) levels", "Macrophage erythroblast attacher levels", "Macrophage migration inhibitory factor (analyte X5356.2) levels", 
+
+    # > Adhesion molecules - keywords "Cell adhesion", "Selectin"
+"Soluble levels of adhesion molecules","epithelial cell adhesion molecule levels", "Intercellular adhesion molecule 5 levels","Intercellular adhesion molecule 3 levels", "Intercellular adhesion molecule 1 levels", "Intercellular adhesion molecule 2 levels", "Intercellular adhesion molecule 4 levels",
+"Vascular cell adhesion protein 1 levels","Adhesion G protein-coupled receptor B3 levels","Adhesion G-protein coupled receptor D1 levels","Basal Cell Adhesion Molecule levels","Adhesion G protein-coupled receptor E1 levels","Adhesion G-protein coupled receptor G2 levels","Adhesion G-protein coupled receptor V1 levels","Adhesion G protein-coupled receptor F5 levels","Adhesion G-protein coupled receptor G1 levels","Adhesion G protein-coupled receptor E2 levels","Platelet endothelial cell adhesion molecule levels", "Basal Cell Adhesion Molecule levels (BCAM.2816.50.2)", "Platelet endothelial cell adhesion molecule levels (PECAM1.2695.25.1)","Adhesion G protein-coupled receptor F5 levels (ADGRF5.6409.57.3)","Adhesion G-protein coupled receptor F1 levels (ADGRF1.11243.90.3)","Vascular cell adhesion protein 1 levels (VCAM1.2967.8.1)", "Intercellular adhesion molecule 1 (red blood cell fatty acid level interaction)","Intercellular adhesion molecule 1 levels","Intercellular adhesion molecule 1 levels (ICAM1.4342.10.3)","Intercellular adhesion molecule 2 levels","Intercellular adhesion molecule 2 levels (ICAM2.5486.73.3)","Intercellular adhesion molecule 3 levels","Intercellular adhesion molecule 4 (analyte X9461.2) levels","Intercellular adhesion molecule 4 levels","Intercellular adhesion molecule 4 levels (ICAM4.6550.4.3)", "Intercellular adhesion molecule 5 levels","Intercellular adhesion molecule 5 levels (ICAM5.8245.27.3)", "Platelet endothelial cell adhesion molecule levels","Platelet endothelial cell adhesion molecule levels (PECAM1.2695.25.1)", "Soluble levels of adhesion molecules", "Vascular adhesion protein-1 levels","Vascular cell adhesion protein 1 (analyte X20093.9) levels","Vascular cell adhesion protein 1 (analyte X2967.8) level","Vascular cell adhesion protein 1 levels","L-selectin levels", "L-Selectin levels (SELL.4831.4.2)","sL-Selectin level (brain)","sL-Selectin level (CSF)", "E-selectin levels","E-selectin levels (SELE.3470.1.2)","sE-Selectin level (CSF)","sE-Selectin level (plasma)","Soluble E-selectin levels", "Soluble E-selectin levels (adjusted for ABO rs2519093 genotypes)", "P-selectin glycoprotein ligand 1 levels","P-selectin glycoprotein ligand 1:Extracellular domain levels","P-Selectin level (CSF)","P-selectin levels","P-selectin levels (SELP.4154.57.2)", 
+
+    # > Chemotactic factors - keywords "Chemotaxis", "Chemokine"
+"Endothelial cell-specific chemotaxis regulator levels", "Leukocyte cell-derived chemotaxin 1 levels","Leukocyte cell-derived chemotaxin-2 (analyte X16763.11) levels", "Leukocyte cell-derived chemotaxin-2 levels", "C-C motif chemokine 1 levels","C-C motif chemokine 13 levels", "C-C motif chemokine 14 levels","C-C motif chemokine 14 levels (CCL14.2900.53.3)","C-C motif chemokine 15 (analyte X14109.15) levels","C-C motif chemokine 15 (analyte X18289.16) levels","C-C motif chemokine 15 (analyte X3509.1) level", "C-C motif chemokine 15 levels","C-C motif chemokine 15 levels (CCL15.14109.15.3)", "C-C motif chemokine 16 levels","C-C motif chemokine 16 levels (CCL16.4913.78.1)","C-C motif chemokine 17 levels","C-C motif chemokine 17 levels (CCL17.3519.3.2)",  "C-C motif chemokine 18 levels", "C-C motif chemokine 19 levels","C-C motif chemokine 19 levels (CCL19.4922.13.1)", "C-C motif chemokine 2 levels", "C-C motif chemokine 20 levels", "C-C motif chemokine 21 levels","C-C motif chemokine 21 levels (CCL21.2516.57.3)", "C-C motif chemokine 22 levels", "C-C motif chemokine 22 levels (CCL22.3508.78.3)", "C-C motif chemokine 23 levels", "C-C motif chemokine 23 levels (CCL23.2913.1.2)", "C-C motif chemokine 24 levels", "C-C motif chemokine 25 (analyte X14068.29) levels", "C-C motif chemokine 25 levels", "C-C motif chemokine 25 levels (CCL25.2705.5.2)", "C-C motif chemokine 26 levels", "C-C motif chemokine 27 levels", "C-C motif chemokine 28 levels","C-C motif chemokine 28 levels (CCL28.2890.59.2)","C-C motif chemokine 3 levels", "C-C motif chemokine 3 levels (CCL3.3040.59.1)", "C-C motif chemokine 3-like 1 levels", "C-C motif chemokine 3-like 1 levels (CCL3L1.2783.18.2)", "C-C motif chemokine 4 levels", "C-C motif chemokine 4-like levels", "C-C motif chemokine 5 (analyte X5480.49) levels", "C-C motif chemokine 5 levels", "C-C motif chemokine 7 (analyte X4886.3) levels","C-C motif chemokine 7 levels","C-C motif chemokine 7 levels (CCL7.4886.3.1)","C-C motif chemokine 8 (analyte X13748.4) levels","C-C motif chemokine 8 levels","C-C motif chemokine 8 levels (CCL8.2785.15.2)","C-X-C motif chemokine 1 levels","C-X-C motif chemokine 10 levels", "C-X-C motif chemokine 10 levels (CXCL10.4141.79.1)", "C-X-C motif chemokine 11 levels", "C-X-C motif chemokine 11 levels (CXCL11.3038.9.2)", "C-X-C motif chemokine 13 levels","C-X-C motif chemokine 14 levels","C-X-C motif chemokine 16 levels","C-X-C motif chemokine 16 levels (CXCL16.2436.49.4)", "C-X-C motif chemokine 17 levels","C-X-C motif chemokine 3 levels","C-X-C motif chemokine 5 levels","C-X-C motif chemokine 5 levels (CXCL5.2979.8.2)", "C-X-C motif chemokine 6 levels","C-X-C motif chemokine 9 (analyte X9188.119) levels", "C-X-C motif chemokine 9 levels", "X-C motif chemokine ligand 1 levels",
+
+    # > Interleukin 1 - keywords "interleukin-1", "IL-1"
+"Toll/interleukin-1 receptor domain-containing adapter protein levels","Toll/interleukin-1 receptor domain-containing adapter protein levels (TIRAP.9839.148.3)", "Interleukin-1 alpha levels","Interleukin-1 beta levels", "Interleukin-1 beta levels (IL1B.3037.62.1)", "Interleukin-1 Receptor accessory protein (analyte X14048.7) levels", "Interleukin-1 Receptor accessory protein (analyte X2630.12) levels", "Interleukin-1 Receptor accessory protein levels", "Interleukin-1 Receptor accessory protein levels (IL1RAP.2630.12.2)","Interleukin-1 receptor antagonist protein levels","Interleukin-1 receptor antagonist protein levels (IL1RN.5353.89.2)","Interleukin-1 receptor type 1 levels", "Interleukin-1 receptor type 2 (analyte X14133.93) levels", "Interleukin-1 receptor type 2 levels","Interleukin-1 receptor type 2 levels (IL1R2.14133.93.3)", "Interleukin-1 receptor-associated kinase 1 levels", "Interleukin-1 receptor-associated kinase 4 levels", "Interleukin-1 receptor-like 1 levels", "Interleukin-1 receptor-like 1 levels (IL1RL1.4234.8.2)", "Interleukin-1 receptor-like 2 levels", "Interleukin-1 receptor-like 2 levels (IL1RL2.2994.71.2)", "Interleukin-1-beta levels", "Interleukin-1-receptor antagonist levels",
+
+    # > Interleukin 6 - keywords "interleukin-6", "IL-6"
+"Interleukin-6 (analyte X2573.20) levels", "Interleukin-6 (analyte X4673.13) levels", "Interleukin-6 (red blood cell fatty acid level interaction)", "Interleukin-6 levels", "Interleukin-6 levels (IL6:P05231:OID20101:v1)", "Interleukin-6 levels (IL6:P05231:OID20563:v1)", "Interleukin-6 levels (IL6:P05231:OID20911:v1)", "Interleukin-6 levels (IL6:P05231:OID21276:v1)", "Interleukin-6 levels in overweight individuals", "Interleukin-6 receptor subunit alpha (analyte X15602.43) levels", "Interleukin-6 receptor subunit alpha (analyte X4139.71) levels", "Interleukin-6 receptor subunit alpha (analyte X8092.29) levels", "Interleukin-6 receptor subunit alpha levels","Interleukin-6 receptor subunit alpha levels (IL6R.4139.71.2)", "Interleukin-6 receptor subunit beta levels","Interleukin-6 receptor subunit beta levels (IL6ST.2620.4.2)", "Serum interleukin-6 concentration",
+
+    # > Interleukin 12 - keywords "interleukin-12", "IL-12"
+"Interleukin-12 levels","Interleukin-12 receptor subunit beta-1 levels","Interleukin-12 receptor subunit beta-1 levels (IL12RB1.2632.5.2)","Interleukin-12 receptor subunit beta-2 levels","Interleukin-12 receptor subunit beta-2 levels (IL12RB2.3815.14.1)","Interleukin-12 subunit B levels","Interleukin-12 subunit beta levels","Interleukin-12p70 levels",
+
+    # > Interleukin 18 - keywords "interleukin-18", "IL-18"
+"Interleukin-18 levels","Interleukin-18 receptor 1 (analyte X14079.14) levels","Interleukin-18 receptor 1 (analyte X3446.7) levels", "interleukin-18 receptor 1 levels", "Interleukin-18 receptor 1 levels (IL18R1.3446.7.2)", "Interleukin-18 receptor accessory protein (analyte X10457.3) levels", "Interleukin-18 receptor accessory protein levels","Interleukin-18-binding protein levels",
+
+    # > C-reactive protein - keywords "C-reactive protein"
+"C-reactive protein", "C-reactive protein (CRP, dL, maximum, inv-norm transformed)", "C-reactive protein (CRP, dL, mean, inv-norm transformed)","C-reactive protein (CRP, dL, minimum, inv-norm transformed)", "C-reactive protein (CRP, L, minimum, inv-norm transformed)","C-reactive protein (red blood cell fatty acid level interaction)","C-reactive protein and white blood cell count", "C-reactive protein levels", "C-reactive protein levels (CRP.4337.49.2)", "C-reactive protein levels (MTAG)", "C-reactive protein levels or HDL-cholesterol levels (pleiotropy)", "C-reactive protein levels or LDL-cholesterol levels (pleiotropy)", "C-reactive protein levels or total cholesterol levels (pleiotropy)", "C-reactive protein levels or triglyceride levels (pleiotropy)", "High-sensitivity C-reactive protein levels", "Serum C-reactive protein concentration", "Serum C-reactive protein concentration in high fat diet",
+
+    # > Interferon - keywords "interferon", "ifn"
+"Interferon alpha-14 levels","Interferon alpha-16 levels","Interferon alpha-2 levels","Interferon alpha-4 levels","Interferon alpha-5 levels","Interferon alpha-7 levels","Interferon alpha/beta receptor 1 (analyte X9183.7) levels", "Interferon alpha/beta receptor 1 levels","Interferon alpha/beta receptor 1 levels (IFNAR1.9183.7.3)", "Interferon gamma levels", "Interferon gamma receptor 1 levels","Interferon gamma receptor 1 levels (IFNGR1.5825.49.3)", "Interferon gamma receptor 2 levels", "Interferon gamma-induced protein 10 levels","Serum levels of protein IFNA10","Serum levels of protein IFNA2","Serum levels of protein IFNA7","Serum levels of protein IFNAR1","Serum levels of protein IFNGR1","Serum levels of protein IFNLR1","IFN-a/b R1 level (CSF)","IFN-g level (CSF)", 
+
+    # > Histamine - keywords "histamine"
+"Histamine N-methyltransferase levels", "Metabolite levels (1-methylhistamine; _1_methylhistamine)","Plasma metabolome feature (hilic_956) (NaNa-Dimethylhistamine)",
+
+    # > Fever - keywords "fever"
+    "Allergic disease (asthma, hay fever or eczema)","Asthma and hay fever","Hay fever and/or eczema", "Rheumatic fever", "Scarlet fever", "Typhoid fever",
+
+    # > Coagulation cascade - keywords "Thrombin", "Coagulation", 
+"Thrombin-induced platelet aggregation", "Thrombin-activatable fibrinolysis inhibitor levels", "Thrombin-activatable fibrinolysis inhibitor activation peptide", "Thrombin levels","Thrombin generation potential phenotypes","Prothrombin time", "Prothrombin levels", "Coagulation factor levels", "End-stage coagulation", "Coagulation Factor VIII levels (F8.13499.30.3)", "Coagulation Factor X levels (F10.4878.3.1)", "Coagulation factor Xa levels (F10.3077.66.2)", "Coagulation Factor XI levels", "Coagulation factor XII levels", "Coagulation factor XIII B chain levels","Coagulation factor IX levels", "Coagulation Factor X levels", "Coagulation Factor VII levels", "Coagulation factor IXab levels", "Coagulation Factor V levels", "Coagulation Factor VIII levels","Coagulation factor Xa levels", "Coagulation factor XIII levels","Coagulation Factor XI level (plasma)", "Coagulation Factor V level (CSF)","Coagulation Factor VII level (CSF)", "Coagulation Factor VII level (plasma)","Thromboxane-A synthase levels",
+
+    # > Eicosanoids - keywords "Eicosanoid"
+"Eicosanoid 11-dehydro-2,3-dinor-TXB2 a levels", "Eicosanoid 11-dehydro-2,3-dinor-TXB2 b levels","Eicosanoid 11-dehydro-TXB3 a levels", "Eicosanoid 11-dehydro-TXB3 b levels","Eicosanoid 11-HETE, Eicosanoid 12-HETE, Eicosanoid 8-HETE levels","Eicosanoid 11,12-diHETrE a levels", "Eicosanoid 11t LTD4 levels","Eicosanoid 12-HETE, Eicosanoid 8-HETE, Eicosanoid 9-HETE a levels","Eicosanoid 12-HETE, Eicosanoid 8-HETE, Eicosanoid 9-HETE b levels","Eicosanoid 12-oxoETE a levels", "Eicosanoid 12,13 diHOME a levels","Eicosanoid 12,13 diHOME b levels", "Eicosanoid 12,13 diHOME levels","Eicosanoid 12,13 EpOME, Eicosanoid 9,10 EpOME levels","Eicosanoid 12oxo LTB4 levels", "Eicosanoid 12S-HpETE b levels","Eicosanoid 12S-HpETE c levels", "Eicosanoid 13-HODE, Eicosanoid 9-HODE a levels","Eicosanoid 13-HpODE levels", "Eicosanoid 13-HpODE, Eicosanoid 9-HpODE b levels","Eicosanoid 13-oxoODE a levels", "Eicosanoid 13-oxoODE b levels","Eicosanoid 13-oxoODE c levels", "Eicosanoid 13(S) HOTrE, Eicosanoid 9(S) HOTrE a levels","Eicosanoid 13(S) HOTrE, Eicosanoid 9(S) HOTrE b levels","Eicosanoid 13S-HpOTrE(gamma) levels","Eicosanoid 14,15-diHETrE b levels","Eicosanoid 14,15-diHETrE levels", "Eicosanoid 14,15-EET, Eicosanoid 5-HETE a levels","Eicosanoid 14,15-EET, Eicosanoid 5-HETE b levels","Eicosanoid 15 oxoEDE levels","Eicosanoid 15-oxoETE, Eicosanoid 17(18) EpETE levels","Eicosanoid 15(S) HETrE, Eicosanoid 8(S) HETrE levels","Eicosanoid 15d PGD2 levels", "Eicosanoid 15R-PGE2, Eicosanoid 8-iso-15-keto-PGF2alpha a levels","Eicosanoid 15R-PGE2, Eicosanoid 8-iso-15-keto-PGF2alpha b levels","Eicosanoid 15S-HpETE levels", "Eicosanoid 17-HETE, Eicosanoid 18(+/-)-HETE, Eicosanoid 20-HETE levels","Eicosanoid 17(18) EpETE levels", "Eicosanoid 19(R)-HETE, Eicosanoid 20-HETE levels","Eicosanoid 20cooh AA b levels", "Eicosanoid 20cooh AA c levels","Eicosanoid 5-oxoETE b levels","Eicosanoid 5-oxoETE levels","Eicosanoid 5,6-diHETrE b levels","Eicosanoid 5(S) HETrE b levels","Eicosanoid 5(S) HETrE levels","Eicosanoid 5S-HpEPE levels","Eicosanoid 5S-HpETE a levels","Eicosanoid 5S-HpETE b levels", "Eicosanoid 5S-HpETE c levels","Eicosanoid 8-iso-PGA1, Eicosanoid PGA1 a levels","Eicosanoid 8-iso-PGA2 levels","Eicosanoid 8-iso-PGF1a, Eicosanoid 8-iso-PGF1b, Eicosanoid PGF1beta a levels","Eicosanoid 8(S) HETrE levels","Eicosanoid 9-HODE levels","Eicosanoid 9-oxoODE a levels","Eicosanoid 9-oxoODE c levels","Eicosanoid 9-oxoOTrE a levels","Eicosanoid 9-oxoOTrE b levels","Eicosanoid 9,10 diHOME levels","Eicosanoid 9(S) HOTrE levels","Eicosanoid 9S-HpOTrE levels","Eicosanoid PDX, Eicosanoid Resolvin D5 levels", "Eicosanoid tetranor 12(R) HETE a levels","Eicosanoid tetranor 12(R) HETE b levels","Eicosanoid tetranor 12(R) HETE levels",
+   
+    # > Prostaglandines - keywords "Prostaglandin"
+"Hematopoietic prostaglandin D synthase levels", "15-hydroxyprostaglandin dehydrogenase [NAD(+)] levels (HPGD.4995.16.1)", "Prostaglandin F2 receptor negative regulator levels (PTGFRN.12727.7.3)","Prostaglandin reductase 1 levels (PTGR1.13543.7.3)", "Prostaglandin-H2 D-isomerase levels (PTGDS.10514.5.3)","Hematopoietic prostaglandin D synthase levels (HPGDS.12549.33.3)", "Prostaglandin reductase 1 levels","Prostaglandin-H2 D-isomerase levels", "Prostaglandin E synthase 2 levels","Prostaglandin reductase 2 levels", "Prostaglandin reductase 3 levels","Prostaglandin E synthase 3 levels", "Prostaglandin F2 receptor negative regulator levels", "15-hydroxyprostaglandin dehydrogenase [NAD(+)] levels", "8-isoprostaglandin-F2alpha x bisphenol A interaction", "8-isoprostaglandin-F2alpha x triclosan interaction","Prostaglandin reductase 1 (analyte X19617.5) levels", "Prostaglandin reductase 1 (analyte X13543.7) levels","Prostaglandin levels (331.192_0.337)", "Prostaglandin/Lipoxin/Leukotriene levels (351.2178_0.341)", "Leukotriene/HpETE/DiHETE/Prostaglandin/Hepoxilin levels (335.222_0.372)", "Leukotriene/HpEPE/Prostaglandin levels (333.2072_0.339)",
+
+    # > Growth factors I - keywords "Platelet-derived growth factor", "PDGF", "Transforming growth factor", "TGF"
+"Platelet-derived growth factor subunit A levels","Platelet-derived growth factor subunit B levels","Platelet-derived growth factor receptor alpha levels","Platelet-derived growth factor receptor beta levels","Platelet-derived growth factor C levels","Platelet-derived growth factor D levels (PDGFD.9341.1.3)","Platelet-derived growth factor receptor alpha levels (PDGFRA.10366.11.3)", "Platelet-derived growth factor receptor beta levels (PDGFRB.3459.49.2)", "Platelet-derived growth factor receptor-like protein levels (PDGFRL.9713.67.3)", "Platelet-derived growth factor subunit A levels (PDGFA.4499.21.1)", "Platelet-derived growth factor subunit B levels (PDGFB.4149.8.2)","Platelet-derived growth factor receptor-like protein levels","Platelet-derived growth factor D levels", "Platelet-derived growth factor BB levels", "Platelet-derived growth factor D (analyte X9341.1) levels", "Platelet-derived growth factor D (analyte X17140.57) levels","Platelet-derived growth factor C (analyte X13658.31) levels","PDGF Rb level (CSF)","PDGFRA level (plasma)","PDGF-CC level (plasma)","PDGF Rb level (plasma)","Serum levels of protein PDGFA","Serum levels of protein PDGFB","Serum levels of protein PDGFD","Serum levels of protein PDGFRA","Serum levels of protein PDGFRL", "PDGF-BB protein levels", "Transforming growth factor-beta-induced protein ig-h3 levels", "Protransforming growth factor alpha [Cleaved into: Transforming growth factor alpha levels", "Transforming growth factor beta-1 proprotein [Cleaved into: Latency-associated peptide levels", "Transforming growth factor beta-2 proprotein levels", "Transforming growth factor beta receptor type 3 levels","Latent-transforming growth factor beta-binding protein 2 levels","Latent-transforming growth factor beta-binding protein 3 levels","Transforming growth factor beta-3 levels (TGFB3.3520.58.1)","Transforming growth factor-beta-induced protein ig-h3 levels (TGFBI.3283.21.1)", "Transforming growth factor beta-2 levels", "Transforming growth factor beta-3 levels","Latency-associated peptide transforming growth factor beta 1 levels","Latent-transforming growth factor beta-binding protein 4 levels", "Transforming growth factor beta-1 (analyte X14108.15) levels","TGF-beta-activated kinase 1 and MAP3K7-binding protein 2 levels", "TGF-beta receptor type-2 levels", "Prostaglandin F2 receptor negative regulator levels (PTGFRN.12727.7.3)","Transforming growth factor beta-3 levels (TGFB3.3520.58.1)","Transforming growth factor-beta-induced protein ig-h3 levels (TGFBI.3283.21.1)","TGF-b R III level (plasma)","LAP TGFbeta1 levels", "TGF alpha levels","Serum levels of protein PTGFRN", "Serum levels of protein CTGF","Serum levels of protein TGFB1","Serum levels of protein TGFB3","Serum levels of protein TGFBI", "TGFA protein levels",
+    
+    # > Enzymes
+"Cytochrome P450 3A4 levels","NADPH--cytochrome P450 reductase levels"
+)
+
+inflammation_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% inflammation_list)
+
+    # > Growth factors II - keywords "flibroblast growth factor", "fgf", "Insulin-like growth factor", "IGF"
+growth_list <- c(
+"Fibroblast growth factor 5 levels","Fibroblast growth factor-binding protein 1 levels","Fibroblast growth factor-binding protein 2 levels", "Fibroblast growth factor receptor 4 levels","Fibroblast growth factor receptor 2 levels","Fibroblast growth factor 16 levels","Fibroblast growth factor 19 levels","Fibroblast growth factor-binding protein 3 levels", "Fibroblast growth factor 21 levels","Fibroblast growth factor 23 levels", "Fibroblast growth factor 2 levels","Fibroblast growth factor 16 levels (FGF16.13725.3.3)","Fibroblast growth factor 19 levels (FGF19.2762.30.2)", "Fibroblast growth factor 7 levels (FGF7.14031.18.3)","Fibroblast growth factor 8 isoform A levels (FGF8.4394.71.2)","Circulating fibroblast growth factor 21 levels","Circulating fibroblast growth factor 23 levels","Fibroblast growth factor receptor-like 1 levels","Acidic fibroblast growth factor intracellular-binding protein levels","Fibroblast growth factor 10 levels","Fibroblast growth factor 12 levels", "Fibroblast growth factor 17 levels","Fibroblast growth factor 18 levels","Fibroblast growth factor 20 levels","Fibroblast growth factor 22 levels", "Fibroblast growth factor 3 levels","Fibroblast growth factor 4 levels","Fibroblast growth factor 6 levels","Fibroblast growth factor 7 levels","Fibroblast growth factor 8 levels","Fibroblast growth factor 8 isoform B levels","Fibroblast growth factor 8 isoform F levels","Fibroblast growth factor 9 levels","Fibroblast growth factor receptor 1 levels","Fibroblast growth factor receptor 3 levels","Fibroblast growth factor receptor substrate 2 levels","Fibroblast growth factor basic levels","Fibroblast growth factor 19 (analyte X2762.30) levels","Fibroblast growth factor 7 (analyte X4487.1) levels","Fibroblast growth factor 7 (analyte X14031.18) levels","Fibroblast growth factor 19 (analyte X13724.27) levels","Fibroblast growth factor receptor-like 1 (analyte X6237.11) levels","Fibroblast growth factor 8 isoform A levels"," FGFR1 oncogene partner levels","Fibroblast growth factor 16 levels (FGF16.13725.3.3)","Fibroblast growth factor 19 levels (FGF19.2762.30.2)","Fibroblast growth factor 7 levels (FGF7.14031.18.3)","Fibroblast growth factor 8 isoform A levels (FGF8.4394.71.2)", "FGF7 level (CSF)","FGF-19 level (plasma)","FGF-19 level (CSF)","Serum levels of protein FGF10","Serum levels of protein FGF19","Serum levels of protein FGF7","Serum levels of protein FGFBP1","Serum levels of protein FGFBP3","Serum levels of protein FGFR3","Serum levels of protein FGFRL1","FGF5 protein levels","IGF 1 (UKB data field 30770)","IGF-like family receptor 1 levels (IGFLR1.7244.16.3)","Insulin growth factor-like family member 3 levels (IGFL3.6961.14.3)","Insulin growth factor-like family member 4 levels (IGFL4.6353.60.3)","Insulin-like growth factor 1 receptor levels (IGF1R.4232.19.2)","Insulin-like growth factor I levels (IGF1.2952.75.2)","Insulin-like growth factor-binding protein 3 levels (IGFBP3.2571.12.3)","Insulin-like growth factor-binding protein 7 levels (IGFBP7.3320.49.2)","IGF-like family receptor 1 levels","IGF-II receptor level (CSF)","IGFBP-1 level (brain)","IGFBP-7 level (brain)","IGFBP 3 plasma levels","IGF-II receptor level (plasma)","Serum levels of protein IGF1","Serum levels of protein IGFBP3","IGF-1 and IGFBP-3 levels (bivariate analysis)","Serum levels of protein IGFLR1","Serum levels of protein IGF1R","Serum levels of protein IGF2R","Serum levels of protein IGFALS","Serum levels of protein IGFBP1","Serum levels of protein IGFBP5","Serum levels of protein IGFBP6","Serum levels of protein IGFBP7","Serum levels of protein IGFBPL1","Serum levels of protein IGFL1","Serum levels of protein IGFL3","Serum levels of protein IGFL4")
+
+growth_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% growth_list)
+
+    # > Tumor necrosis factor - keywords "tumor necrosis factorial", "tnf" 
+tnf_list1 <- c("Serum levels of protein C1QTNF1", "Serum levels of protein C1QTNF5","Serum levels of protein C1QTNF9", "Serum levels of protein TNF","Serum levels of protein TNFAIP6", "Serum levels of protein TNFAIP8","Serum levels of protein TNFRSF10A", "Serum levels of protein TNFRSF10B","Serum levels of protein TNFRSF11A", "Serum levels of protein TNFRSF11B","Serum levels of protein TNFRSF12A", "Serum levels of protein TNFRSF13B","Serum levels of protein TNFRSF14", "Serum levels of protein TNFRSF18","Serum levels of protein TNFRSF19", "Serum levels of protein TNFRSF1A","Serum levels of protein TNFRSF1B", "Serum levels of protein TNFRSF8","Serum levels of protein TNFSF11", "Serum levels of protein TNFSF12","Serum levels of protein TNFSF14", "Serum levels of protein TNFSF18", "TNF levels", "TNF receptor-associated factor 1 levels","TNF receptor-associated factor 2 levels", "TNF receptor-associated factor 3 Isoform 2 levels", "TNF receptor-associated factor 4 levels", "TNF sR-II level (brain)","TNF-beta levels", "TNF-related activation-induced cytokine levels", "TNF-related apoptosis-inducing ligand levels", "TNF-related apoptosis-inducing ligand receptor 2 levels", "TNFAIP3-interacting protein 1 levels", "TNFRSF10A protein levels", "TNFRSF10B protein levels", "TNFRSF10C protein levels", "TNFRSF11A protein levels", "TNFRSF11B protein levels", "TNFRSF14 protein levels", "TNFRSF6B protein levels", "TNFRSF9 levels", "TNFSF10 protein levels", "TNFSF14 protein levels", "TNFSF15 level (CSF)", "Tumor necrosis factor levels (TNF:P01375:OID20074:v1)", "Tumor necrosis factor levels (TNF:P01375:OID20473:v1)", "Tumor necrosis factor levels (TNF:P01375:OID20848:v1)", "Tumor necrosis factor levels (TNF:P01375:OID21237:v1)", "Tumor necrosis factor ligand superfamily member 12 levels (TNFSF12.5939.42.3)", "Tumor necrosis factor ligand superfamily member 14 levels (TNFSF14.5355.69.3)", "Tumor necrosis factor ligand superfamily member 8 levels (TNFSF8.3421.54.2)", "Tumor necrosis factor receptor superfamily member 11A levels (TNFRSF11A.8316.36.3)", "Tumor necrosis factor receptor superfamily member 11B levels (TNFRSF11B.2526.53.3)", "Tumor necrosis factor receptor superfamily member 1B levels (TNFRSF1B.8368.102.3)", "Tumor necrosis factor receptor superfamily member 6B levels (TNFRSF6B.5070.76.3)", "Tumor necrosis factor-inducible gene 6 protein levels (TNFAIP6.5036.50.1)", "Complement C1q and tumor necrosis factor-related protein 9A levels", "Complement C1q and tumor necrosis factor-related protein 9A levels (C1QTNF9.6019.12.3)", "Complement C1q tumor necrosis factor-related protein 1 levels","Complement C1q tumor necrosis factor-related protein 1 levels (C1QTNF1.6304.8.3)", "Complement C1q tumor necrosis factor-related protein 3 levels","Complement C1q tumor necrosis factor-related protein 4 (analyte X21567.214) levels", "Complement C1q tumor necrosis factor-related protein 5 levels","Complement C1q tumor necrosis factor-related protein 5 levels (C1QTNF5.7810.20.3)","Complement C1q tumor necrosis factor-related protein 6 levels","Tumor necrosis factor alpha levels","Tumor necrosis factor alpha-induced protein 2 levels","Tumor necrosis factor alpha-induced protein 3 levels","Tumor necrosis factor alpha-induced protein 8 levels","Tumor necrosis factor alpha-induced protein 8-like protein 2 levels","Tumor necrosis factor beta levels","Tumor necrosis factor levels")
+
+tnf1_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% tnf_list1)
+
+tnf_list2 <- c("Tumor necrosis factor levels (TNF:P01375:OID20074:v1)", "Tumor necrosis factor levels (TNF:P01375:OID20473:v1)", "Tumor necrosis factor levels (TNF:P01375:OID20848:v1)", "Tumor necrosis factor levels (TNF:P01375:OID21237:v1)","Tumor necrosis factor ligand superfamily member 10 levels","Tumor necrosis factor ligand superfamily member 11 levels", "Tumor necrosis factor ligand superfamily member 12 levels","Tumor necrosis factor ligand superfamily member 12 levels (TNFSF12.5939.42.3)", "Tumor necrosis factor ligand superfamily member 13 levels","Tumor necrosis factor ligand superfamily member 13B levels","Tumor necrosis factor ligand superfamily member 14 (analyte X5355.69) levels", "Tumor necrosis factor ligand superfamily member 14 levels","Tumor necrosis factor ligand superfamily member 14 levels (TNFSF14.5355.69.3)", "Tumor necrosis factor ligand superfamily member 15 (analyte X2968.61) levels", "Tumor necrosis factor ligand superfamily member 15 levels", "Tumor necrosis factor ligand superfamily member 18 levels", "Tumor necrosis factor ligand superfamily member 6 levels", "Tumor necrosis factor ligand superfamily member 6, soluble form levels", "Tumor necrosis factor ligand superfamily member 6, soluble form levels (FASLG.3052.8.2)", "Tumor necrosis factor ligand superfamily member 8 levels", "Tumor necrosis factor ligand superfamily member 8 levels (TNFSF8.3421.54.2)", "Tumor necrosis factor receptor 1 levels", "Tumor necrosis factor receptor 2 levels", "Tumor necrosis factor receptor II (red blood cell fatty acid level interaction)", "Tumor necrosis factor receptor superfamily member 10A levels", "Tumor necrosis factor receptor superfamily member 10B levels", "Tumor necrosis factor receptor superfamily member 10C levels", "Tumor necrosis factor receptor superfamily member 10D levels", "Tumor necrosis factor receptor superfamily member 11A levels", "Tumor necrosis factor receptor superfamily member 11A levels (TNFRSF11A.8316.36.3)", "Tumor necrosis factor receptor superfamily member 11B levels", "Tumor necrosis factor receptor superfamily member 11B levels (TNFRSF11B.2526.53.3)", "Tumor necrosis factor receptor superfamily member 12A levels", "Tumor necrosis factor receptor superfamily member 13B levels", "Tumor necrosis factor receptor superfamily member 13C levels", "Tumor necrosis factor receptor superfamily member 14 (analyte X10472.53) levels", "Tumor necrosis factor receptor superfamily member 14 (analyte X5352.11) levels", "Tumor necrosis factor receptor superfamily member 14 levels", "Tumor necrosis factor receptor superfamily member 16 levels (NGFR.8949.3.3)", "Tumor necrosis factor receptor superfamily member 17 levels", "Tumor necrosis factor receptor superfamily member 18 (analyte X11837.7) levels")
+
+tnf2_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% tnf_list2)
+
+tnf_list3 <- c("Tumor necrosis factor receptor superfamily member 18 levels", "Tumor necrosis factor receptor superfamily member 19 levels", "Tumor necrosis factor receptor superfamily member 19L levels", "Tumor necrosis factor receptor superfamily member 19L levels (RELT.5115.31.3)", "Tumor necrosis factor receptor superfamily member 1A levels", "Tumor necrosis factor receptor superfamily member 1B (analyte X3152.57) levels", "Tumor necrosis factor receptor superfamily member 1B (analyte X8368.102) levels", "Tumor necrosis factor receptor superfamily member 1B levels", "Tumor necrosis factor receptor superfamily member 1B levels (TNFRSF1B.8368.102.3)", "Tumor necrosis factor receptor superfamily member 21 (analyte X5404.53) levels", "Tumor necrosis factor receptor superfamily member 21 (analyte X9259.35) level", "Tumor necrosis factor receptor superfamily member 21 levels", "Tumor necrosis factor receptor superfamily member 27 levels", "Tumor necrosis factor receptor superfamily member 3 levels", "Tumor necrosis factor receptor superfamily member 3 levels (LTBR.2636.10.2)", "Tumor necrosis factor receptor superfamily member 4 levels", "Tumor necrosis factor receptor superfamily member 5 levels", "Tumor necrosis factor receptor superfamily member 6 (analyte X5392.73) levels", "Tumor necrosis factor receptor superfamily member 6 (analyte X6248.68) levels", "Tumor necrosis factor receptor superfamily member 6 (analyte X9218.7) levels", "Tumor necrosis factor receptor superfamily member 6 (analyte X9459.7) levels", "Tumor necrosis factor receptor superfamily member 6 levels", "Tumor necrosis factor receptor superfamily member 6 levels (FAS.9459.7.3)", "Tumor necrosis factor receptor superfamily member 6B levels", "Tumor necrosis factor receptor superfamily member 6B levels (TNFRSF6B.5070.76.3)", "Tumor necrosis factor receptor superfamily member 8 levels", "Tumor necrosis factor receptor superfamily member 9 levels", "Tumor necrosis factor receptor superfamily member EDAR levels", "Tumor necrosis factor receptor superfamily member EDAR levels (EDAR.2977.7.2)", "Tumor necrosis factor receptor type 1-associated DEATH domain protein levels", "Tumor necrosis factor-inducible gene 6 protein levels", "Tumor necrosis factor-inducible gene 6 protein levels (TNFAIP6.5036.50.1)")
+
+tnf3_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% tnf_list3)
+
+  ## > COMPLEMENT - keywords "Complement" 
+complement_list <- c("Complement factor H binding to malondialdehyde", "Complement C1q tumor necrosis factor-related protein 5 levels", "Complement C1q and tumor necrosis factor-related protein 9A levels", "Complement C1r subcomponent levels", "Complement C1r subcomponent-like protein levels", "Complement C1q tumor necrosis factor-related protein 6 levels", "Complement C1s subcomponent levels", "Complement C2 levels","Complement C3 levels", "Complement C5 levels","Complement component C7 levels", "Complement component C8 beta chain levels", "Complement C1q-like protein 2 levels", "Complement C1q tumor necrosis factor-related protein 1 levels", "Complement C1q subcomponent subunit A levels", "Complement component C9 levels", "Complement decay-accelerating factor levels", "Complement factor I levels", "Complement receptor type 1 levels", "Complement receptor type 2 levels", "Complement factor H-related protein 2 levels", "Complement factor H-related protein 4 levels", "Complement factor H-related protein 5 levels", "Complement factor D levels", "Complement factor H levels", "Complement C1q and tumor necrosis factor-related protein 9A levels (C1QTNF9.6019.12.3)", "Complement C1q subcomponent subunit C levels (C1QC.14100.63.3)", "Complement C1q tumor necrosis factor-related protein 1 levels (C1QTNF1.6304.8.3)", "Complement C1q tumor necrosis factor-related protein 5 levels (C1QTNF5.7810.20.3)", "Complement C1r subcomponent-like protein levels (C1RL.9348.1.3)", "Complement C4 levels (C4A.C4B.4481.34.2)", "Complement factor H-related protein 5 levels (CFHR5.3666.17.4)", "Complement factor I levels (CFI.2567.5.6)", "Complement component 1 Q subcomponent-binding protein, mitochondrial levels (C1QBP.4967.1.1)", "Complement component C8 levels (C8A.C8B.C8G.2429.27.4)", "Complement component C9 levels (C9.3060.43.2)","Complement decay-accelerating factor levels (CD55.5069.9.3)", "Complement factor B levels (CFB.4129.72.1)", "Complement factor H levels (CFH.4159.130.1)","Complement C5b-C6 complex levels","Complement component C6 levels","Complement component C8 gamma chain levels", "Complement factor B levels","Complement factor H-related protein 1 levels","Complement C3 and C4 levels","complement factor H-related 5 level (CSF)", "complement factor H-related 5 level (plasma)","Complement C1q tumor necrosis factor-related protein 3 levels", "Complement component 1 Q subcomponent-binding protein, mitochondrial levels", "Complement C1q subcomponent subunit C levels", "Complement component C1q receptor levels", "Complement C3b levels", "Complement C3b, inactivated levels","Complement C3d fragment levels","Complement C4 levels","Complement C4b levels","Complement C1q subcomponent levels","Complement component C8 levels", "Complement component C7 (analyte X2888.49) levels", "Complement factor D (analyte X2946.52) levels", "Complement C1s subcomponent (analyte X8840.61) levels","Complement component C9 (analyte X3060.43) levels", "Complement factor H-related protein 5 (analyte X7885.17) levels", "Complement factor H-related protein 5 (analyte X3666.17) levels", "Complement factor H-related protein 3 levels", "Complement factor H-related protein 4A levels", "Serum C3d:C3 ratio (systemic complement activation)", "Complement C1s subcomponent (analyte X20203.45) levels", "Complement component C1q receptor (analyte X14136.234) levels", "Complement factor H-related protein 5 (analyte X16055.3) levels", "Complement component C7 (analyte X13731.14) levels", "Complement component C9 (analyte X13722.105) levels", "Complement factor D (analyte X13678.169) levels", "Complement C1q tumor necrosis factor-related protein 4 (analyte X21567.214) levels", "Complement C1q-like protein 3 levels", "Complement factor H-related protein 1 (analyte X5982.50) levels", "Complement factor H-like 1 protein levels", "Complement factor H measurement","Circulating complement factor I levels")
+
+complement_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% complement_list) 
+
+  ## UNITE DATAFRAMES RECOVERED TO INTEGRATE THE TRAITS ASSOCIATED WITH INNATE IMMUNE RESPONSE DISEASE/TRAITS
+innate <- bind_rows(complement_traits, inflammation_traits, nk_traits, damage_traits, rig_traits, tlr_traits, growth_traits, clr_traits, bowel_traits, gastro_traits, mucosal_traits, skin_traits, tnf3_traits, tnf2_traits, tnf1_traits)
+
+studies <- innate %>%
+  select(`COUNTRY OF RECRUITMENT`) %>%
+  distinct()
+```
+
+## STEP 4: Identification of ANTIGEN presentation associated traits
+
+```{r antigen_presentation_words}
+## > HLA AND MHC PRESENTATION - keywords "MHC", "major histocompatibility complex", "HLA", "CD40", "CD80", "CD86","PDL-1"
+hla_list <- c("MHC class I polypeptide-related sequence A levels","MHC class I polypeptide-related sequence B_A levels","MHC class I polypeptide-related sequence B levels (MICB.5102.55.3)","MHC class I polypeptide-related sequence B levels","HLA class II histocompatibility antigen, DR alpha chain levels","HLA class I histocompatibility antigen, A alpha chain levels","HLA class I histocompatibility antigen, alpha chain E levels", "HLA class II histocompatibility antigen, DM alpha chain levels (HLA.DMA.10639.1.3)","HLA class II histocompatibility antigen, DP beta 1 chain levels (HLA.DPB1.8755.202.3)","HLA class II histocompatibility antigen, DQ alpha 2 chain levels (HLA.DQA2.7757.5.3)","HLA class I histocompatibility antigen, alpha chain G levels","HLA class II histocompatibility antigen gamma chain levels","HLA class II histocompatibility antigen, DQ alpha 2 chain levels", "HLA class II histocompatibility antigen, DR beta 3 chain levels", "Hypersomnia (HLA-DQB1*06:02 negative)", "HLA class II histocompatibility antigen, DR alpha chain levels","HLA class I histocompatibility antigen, A alpha chain levels","PDL-1 on CD14+ CD16- monocyte","PDL-1 on CD14+ CD16+ monocyte", "PDL-1 on CD14- CD16+ monocyte","PDL-1 on CD14- CD16-","PDL-1 on monocyte")
+
+hla_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% hla_list) 
+
+hla_list2 <- c("HLA class I histocompatibility antigen, alpha chain E levels", "HLA class II histocompatibility antigen, DM alpha chain levels (HLA.DMA.10639.1.3)", "HLA class II histocompatibility antigen, DP beta 1 chain levels (HLA.DPB1.8755.202.3)","HLA class II histocompatibility antigen, DQ alpha 2 chain levels (HLA.DQA2.7757.5.3)", "HLA class I histocompatibility antigen, alpha chain G levels", "HLA class II histocompatibility antigen gamma chain levels", "HLA class II histocompatibility antigen, DQ alpha 2 chain levels", "HLA class II histocompatibility antigen, DR beta 3 chain levels", "Alloimmunization response to pregnancy (HLA class I)", "HLA-C levels",  "CD33 on CD33+ HLA DR+","CD33 on CD33+ HLA DR+ CD14-","CD4 on HLA DR+ CD4+ T cell","CD45 on HLA DR+ T cell","CD45 on HLA DR+ CD4+ T cell","CD33 on CD33+ HLA DR+ CD14dim","CD33 on CD33dim HLA DR+ CD11b+","CD33 on CD33dim HLA DR+ CD11b-", "CD33 on CD33dim HLA DR-","CD16-CD56 on HLA DR+ Natural Killer","HLA DR++ monocyte %monocyte","HLA DR++ monocyte %leukocyte", "HLA DR++ monocyte Absolute Count","CD11c+ HLA DR++ monocyte Absolute Count","CD11c+ HLA DR++ monocyte %monocyte","CD45 on CD33+ HLA DR+ CD14-", "CD45 on CD33- HLA DR-","CD45 on CD33- HLA DR+","CD45 on CD33dim HLA DR-","CD8 on HLA DR+ CD8+ T cell", "CD14 on CD33+ HLA DR+ CD14dim","CD14 on CD33dim HLA DR+ CD11b+","HLA DR on HLA DR+ T cell","HLA DR on HLA DR+ CD4+ T cell", "HLA DR on B cell","HLA DR on HLA DR+ Natural Killer","CD33+ HLA DR+ CD14- %CD33+ HLA DR+","CD33+ HLA DR+ CD14dim Absolute Count", "CD33+ HLA DR+ CD14dim %CD33+ HLA DR+","CD33- HLA DR- Absolute Count","CD33- HLA DR+ Absolute Count","CD33dim HLA DR+ CD11b+ Absolute Count", "CD33dim HLA DR+ CD11b+ %CD33dim HLA DR+","CD33dim HLA DR+ CD11b- Absolute Count","CD33dim HLA DR+ CD11b- %CD33dim HLA DR+","CD33dim HLA DR- Absolute Count","Basophil %CD33dim HLA DR- CD66b-","Immature Myeloid-Derived Suppressor Cells %CD33dim HLA DR- CD66b-", "CD33+ HLA DR+ Absolute Count","CD33+ HLA DR+ CD14- Absolute Count", "CD3 on HLA DR+ T cell","CD3 on HLA DR+ CD4+ T cell","CD3 on HLA DR+ CD8+ T cell","CD11b on CD33+ HLA DR+ CD14dim","HLA DR on myeloid Dendritic Cell","HLA DR on plasmacytoid Dendritic Cell","HLA DR on Dendritic Cell", "HLA DR on Hematopoietic Stem Cell","HLA DR on CD33+ HLA DR+ CD14-","HLA DR on CD33+ HLA DR+ CD14dim","HLA DR on CD33dim HLA DR+ CD11b+","HLA DR on CD33dim HLA DR+ CD11b-","HLA DR on CD33- HLA DR+", "CD11b on CD33dim HLA DR-","HLA DR+ T cell Absolute Count","HLA DR+ T cell%T cell","HLA DR+ T cell%lymphocyte","HLA DR+ Natural Killer Absolute Count","HLA DR+ Natural Killer %Natural Killer","HLA DR+ Natural Killer  %CD3- lymphocyte","HLA DR+ CD4+ T cell Absolute Count","HLA DR+ CD4+ T cell %T cell","HLA DR+ CD4+ T cell %lymphocyte", "HLA DR+ CD8+ T cell Absolute Count","HLA DR+ CD8+ T cell %T cell","HLA DR+ CD8+ T cell %lymphocyte","HLA DR on CD14- CD16+ monocyte", "HLA DR on CD14+ CD16- monocyte","HLA DR on CD14+ monocyte","HLA DR on CD14- CD16-","HLA DR on monocyte","HLA DR on CD14+ CD16+ monocyte","Serum levels of protein HHLA2","Serum levels of protein HLA-DRB3")
+
+hla2_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% hla_list) 
+
+hla_list3 <- c("Follicular dendritic cell secreted peptide levels", "CD123 on plasmacytoid Dendritic Cell", "CD123 on CD62L+ plasmacytoid Dendritic Cell","Plasmacytoid Dendritic Cell %Dendritic Cell","Myeloid Dendritic Cell Absolute Count","Myeloid Dendritic Cell %Dendritic Cell","Plasmacytoid Dendritic Cell Absolute Count","Dendritic Cell Absolute Count", "CD62L- Dendritic Cell Absolute Count","CD62L- Dendritic Cell %Dendritic Cell","CD86+ myeloid Dendritic Cell Absolute Count","CD86+ myeloid Dendritic Cell %Dendritic Cell","CD86+ plasmacytoid Dendritic Cell %Dendritic Cell","CD62L- myeloid Dendritic Cell Absolute Count","CD62L- myeloid Dendritic Cell %Dendritic Cell","CD62L- plasmacytoid Dendritic Cell Absolute Count", "CD62L- plasmacytoid Dendritic Cell %Dendritic Cell","CD62L- CD86+ myeloid Dendritic Cell Absolute Count","CD62L- CD86+ myeloid Dendritic Cell %Dendritic Cell","CD80 on myeloid Dendritic Cell","CD80 on CD62L+ myeloid Dendritic Cell","CD80 on plasmacytoid Dendritic Cell","CD80 on CD62L+ plasmacytoid Dendritic Cell","CD62L on CD62L+ myeloid Dendritic Cell", "CD62L on CD62L+ plasmacytoid Dendritic Cell","CD62L on CD62L+ Dendritic Cell","HLA DR on myeloid Dendritic Cell","HLA DR on plasmacytoid Dendritic Cell","HLA DR on Dendritic Cell","CD11c on myeloid Dendritic Cell", "CD11c on CD62L+ myeloid Dendritic Cell","CCR2 on myeloid Dendritic Cell","CCR2 on CD62L+ myeloid Dendritic Cell","CCR2 on plasmacytoid Dendritic Cell", "CCR2 on CD62L+ plasmacytoid Dendritic Cell","CD40 ligand levels","CD40 levels","CD40L receptor levels","CD40 plasma levels","CD40 on CD14+ CD16- monocyte","CD40 on CD14+ CD16+ monocyte","CD40 on monocytes","CD40 on CD14- CD16+ monocyte","Serum levels of protein CD40","Serum levels of protein CD40LG","CD40 protein levels","CD80 on granulocyte","CD80 on myeloid Dendritic Cell","CD80 on CD62L+ myeloid Dendritic Cell","CD80 on plasmacytoid Dendritic Cell","CD80 on CD62L+ plasmacytoid Dendritic Cell", "CD80 on monocyte","T-lymphocyte activation antigen CD80 levels","T-lymphocyte activation antigen CD86 levels","CD86+ myeloid Dendritic Cell Absolute Count", "CD86+ myeloid Dendritic Cell %Dendritic Cell","CD86+ plasmacytoid Dendritic Cell %Dendritic Cell","CD62L- CD86+ myeloid Dendritic Cell Absolute Count", "CD62L- CD86+ myeloid Dendritic Cell %Dendritic Cell", "CD86 on monocyte","CD86 on granulocyte","ICOS ligand levels (ICOSLG.9303.9.3)","Serum levels of protein ICOSLG","ICOSLG protein levels")
+
+hla3_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% hla_list3) 
+
+dc_list <- c("Follicular dendritic cell secreted peptide levels","CD123 on plasmacytoid Dendritic Cell","CD123 on CD62L+ plasmacytoid Dendritic Cell","Plasmacytoid Dendritic Cell %Dendritic Cell","Myeloid Dendritic Cell Absolute Count","Myeloid Dendritic Cell %Dendritic Cell","Plasmacytoid Dendritic Cell Absolute Count","Dendritic Cell Absolute Count","CD62L- Dendritic Cell Absolute Count","CD62L- Dendritic Cell %Dendritic Cell","CD86+ myeloid Dendritic Cell Absolute Count","CD86+ myeloid Dendritic Cell %Dendritic Cell","CD86+ plasmacytoid Dendritic Cell %Dendritic Cell","CD62L- myeloid Dendritic Cell Absolute Count","CD62L- myeloid Dendritic Cell %Dendritic Cell","CD62L- plasmacytoid Dendritic Cell Absolute Count","CD62L- plasmacytoid Dendritic Cell %Dendritic Cell","CD62L- CD86+ myeloid Dendritic Cell Absolute Count","CD62L- CD86+ myeloid Dendritic Cell %Dendritic Cell","CD80 on myeloid Dendritic Cell","CD80 on CD62L+ myeloid Dendritic Cell","CD80 on plasmacytoid Dendritic Cell","CD80 on CD62L+ plasmacytoid Dendritic Cell","CD62L on CD62L+ myeloid Dendritic Cell","CD62L on CD62L+ plasmacytoid Dendritic Cell","CD62L on CD62L+ Dendritic Cell","HLA DR on myeloid Dendritic Cell","HLA DR on plasmacytoid Dendritic Cell","HLA DR on Dendritic Cell","CD11c on myeloid Dendritic Cell","CD11c on CD62L+ myeloid Dendritic Cell","CCR2 on myeloid Dendritic Cell","CCR2 on CD62L+ myeloid Dendritic Cell","CCR2 on plasmacytoid Dendritic Cell","CCR2 on CD62L+ plasmacytoid Dendritic Cell"
+)
+
+dc_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% dc_list) 
+
+  ## UNITE DATAFRAMES RECOVERED TO INTEGRATE THE TRAITS ASSOCIATED WITH ANTIGEN PRESENTATION ASSOCIATED SNPS
+antigen_presentation <- bind_rows(hla_traits, hla2_traits, hla3_traits, dc_traits)
+```
+
+## STEP 5: Identification of ADAPTIVE immune response associated traits
+
+```{r adaptive_words}
+## T cells - keywords "T cell"
+tcell_list <- c("Terminally Differentiated CD8+ T cell Absolute Count", "Terminally Differentiated CD8+ T cell %T cell", "Terminally Differentiated CD8+ T cell %CD8+ T cell","Terminally Differentiated CD4+ T cell Absolute Count", "Terminally Differentiated CD4+ T cell %T cell","Terminally Differentiated CD4+ T cell %CD4+ T cell","Terminally Differentiated CD4-CD8- T cell Absolute Count","Terminally Differentiated CD4-CD8- T cell %T cell","Terminally Differentiated CD4-CD8- T cell %CD4-CD8- T cell","TCRgd T cell Absolute Count","TCRgd T cell %lymphocyte","T cell lymphocyte profile difference","T cell Absolute Count","T cell %lymphocyte","T cell %leukocyte","Secreting CD4 regulatory T cell Absolute Count", "Secreting CD4 regulatory T cell %CD4+ T cell","Secreting CD4 regulatory T cell %CD4 regulatory T cell","Resting CD4 regulatory T cell Absolute Count","Resting CD4 regulatory T cell %CD4+ T cell", "Resting CD4 regulatory T cell %CD4 regulatory T cell","Natural Killer T %T cell","Naive CD8+ T cell Absolute Count","Naive CD8+ T cell %T cell","Naive CD8+ T cell %CD8+ T cell","Naive CD4+ T cell Absolute Count","Naive CD4+ T cell %T cell","Naive CD4+ T cell %CD4+ T cell", "Naive CD4-CD8- T cell %T cell","HVEM on Terminally Differentiated CD4+ T cell","HVEM on T cell","HVEM on naive CD8+ T cell", "HVEM on naive CD4+ T cell","HVEM on Effector Memory CD8+ T cell","HVEM on Effector Memory CD4+ T cell","HVEM on Central Memory CD8+ T cell", "HVEM on Central Memory CD4+ T cell","HVEM on CD8+ T cell","HVEM on CD45RA- CD4+ T cell","HVEM on CD4+ T cell","HLA DR+ T cell%T cell","HLA DR+ T cell%lymphocyte","HLA DR+ T cell Absolute Count", "HLA DR+ CD8+ T cell Absolute Count","HLA DR+ CD8+ T cell %T cell","HLA DR+ CD8+ T cell %lymphocyte","HLA DR+ CD4+ T cell Absolute Count", "HLA DR+ CD4+ T cell %T cell","HLA DR+ CD4+ T cell %lymphocyte","HLA DR on HLA DR+ T cell","HLA DR on HLA DR+ CD4+ T cell","Effector Memory CD8+ T cell Absolute Count","Effector Memory CD8+ T cell %T cell","Effector Memory CD8+ T cell %CD8+ T cell","Effector Memory CD4+ T cell Absolute Count","Effector Memory CD4+ T cell %T cell","Effector Memory CD4+ T cell %CD4+ T cell","Effector Memory CD4-CD8- T cell Absolute Count","Effector Memory CD4-CD8- T cell %T cell","Effector Memory CD4-CD8- T cell %CD4-CD8- T cell","Central Memory CD4+ T cell Absolute Count","Central Memory CD4+ T cell %T cell", "Central Memory CD4+ T cell %CD4+ T cell","CD8dim T cell Absolute Count","CD8dim T cell %T cell","CD8dim T cell %leukocyte","CD8dim Natural Killer T %T cell","CD8+ T cell Absolute Count","CD8+ T cell %T cell","CD8+ T cell %leukocyte","CD8+ Natural Killer T %T cell","CD8+ and CD8dim T cell %leukocyte","CD8 on naive CD8+ T cell","CD8 on HLA DR+ CD8+ T cell","CD8 on Effector Memory CD8+ T cell","CD8 on Central Memory CD8+ T cell","CD8 on CD8+ T cell","CD8 on CD39+ CD8+ T cell","CD8 on CD28+ CD45RA+ CD8+ T cell","CD8 on CD28+ CD45RA- CD8+ T cell","CD8 on CD28- CD8+ T cell","CD4RA on Terminally Differentiated CD4+ T cell","CD45RA+ CD8+ T cell Absolute Count","CD45RA+ CD8+ T cell %T cell","CD45RA+ CD8+ T cell %CD8+ T cell","CD45RA- CD4+ T cell Absolute Count","CD45RA- CD4+ T cell %T cell","CD45RA- CD4+ T cell %CD4+ T cell","CD45RA on Terminally Differentiated CD8+ T cell","CD45RA on resting CD4 regulatory T cell","CD45RA on naive CD8+ T cell","CD45RA on naive CD4+ T cell","CD45RA on CD39+ resting CD4 regulatory T cell","CD45 on HLA DR+ T cell","CD45 on HLA DR+ CD4+ T cell","CD45 on CD8+ T cell","CD45 on CD4+ T cell")
+
+tcell_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% tcell_list) 
+
+tcell_list2 <- c("CD4+CD8+ T cell Absolute Count","CD4+CD8+ T cell %T cell","CD4+CD8+ T cell %leukocyte","CD4+/CD8+ T cell","CD4+ T cell Absolute Count","CD4+ T cell %T cell","CD4+ T cell %leukocyte","CD4+ CD8dim T cell Absolute Count","CD4+ CD8dim T cell %lymphocyte", "CD4+ CD8dim T cell %leukocyte","CD4-CD8- T cell Absolute Count","CD4-CD8- T cell %T cell","CD4-CD8- T cell %leukocyte","CD4-CD8- Natural Killer T %T cell","CD4 regulatory T cell %T cell","CD4 regulatory T cell %CD4+ T cell","CD4 on secreting CD4 regulatory T cell","CD4 on resting CD4 regulatory T cell","CD4 on naive CD4+ T cell","CD4 on HLA DR+ CD4+ T cell","CD4 on Effector Memory CD4+ T cell","CD4 on Central Memory CD4+ T cell","CD4 on CD45RA+ CD4+ T cell","CD4 on CD4+ T cell","CD4 on CD4 regulatory T cell","CD4 on CD39+ secreting CD4 regulatory T cell","CD4 on CD39+ CD4+ T cell","CD4 on CD39+ activated CD4 regulatory T cell","CD4 on CD28+ CD4+ T cell","CD4 on activated CD4 regulatory T cell","CD4 on activated & secreting CD4 regulatory T cell","CD39+ secreting CD4 regulatory T cell Absolute Count","CD39+ secreting CD4 regulatory T cell %secreting CD4 regulatory T cell", "CD39+ secreting CD4 regulatory T cell %CD4 regulatory T cell", "CD39+ resting CD4 regulatory T cell Absolute Count","CD39+ resting CD4 regulatory T cell %resting CD4 regulatory T cell","CD39+ resting CD4 regulatory T cell %CD4 regulatory T cell","CD39+ CD8+ T cell Absolute Count","CD39+ CD8+ T cell %T cell","CD39+ CD8+ T cell %CD8+ T cell","CD39+ CD4+ T cell Absolute Count", "CD39+ CD4+ T cell %T cell","CD39+ CD4+ T cell %CD4+ T cell","CD39+ activated CD4 regulatory T cell Absolute Count","CD39+ activated CD4 regulatory T cell %CD4 regulatory T cell","CD39+ activated CD4 regulatory T cell %activated CD4 regulatory T cell","CD39 on CD39+ secreting CD4 regulatory T cell","CD39 on CD39+ CD8+ T cell","CD39 on CD39+ CD4+ T cell","CD39 on CD39+ activated CD4 regulatory T cell","CD3 on Terminally Differentiated CD8+ T cell","CD3 on Terminally Differentiated CD4+ T cell","CD3 on secreting CD4 regulatory T cell","CD3 on resting CD4 regulatory T cell","CD3 on naive CD8+ T cell","CD3 on Naive CD4+ T cell","CD3 on HLA DR+ T cell","CD3 on HLA DR+ CD8+ T cell","CD3 on HLA DR+ CD4+ T cell","CD3 on Effector Memory CD8+ T cell","CD3 on Effector Memory CD4+ T cell","CD3 on Central Memory CD8+ T cell","CD3 on Central Memory CD4+ T cell","CD3 on CD8+ T cell","CD3 on CD45RA+ CD4+ T cell","CD3 on CD45RA- CD4+ T cell","CD3 on CD4+ T cell","CD3 on CD4 regulatory T cell","CD3 on CD39+ secreting CD4 regulatory T cell","CD3 on CD39+ resting CD4 regulatory T cell","CD3 on CD39+ CD8+ T cell","CD3 on CD39+ CD4+ T cell","CD3 on CD39+ activated CD4 regulatory T cell","CD3 on CD28+ CD45RA+ CD8+ T cell","CD3 on CD28+ CD45RA- CD8+ T cell","CD3 on CD28+ CD4+ T cell","CD3 on CD28- CD8+ T cell", "CD3 on activated CD4 regulatory T cell","CD3 on activated & secreting CD4 regulatory T cell","CD28+ CD45RA+ CD8dim T cell Absolute Count","CD28+ CD45RA+ CD8dim T cell %T cell","CD28+ CD45RA+ CD8dim T cell %CD8dim T cell","CD28+ CD45RA+ CD8+ T cell Absolute Count","CD28+ CD45RA+ CD8+ T cell %T cell","CD28+ CD45RA- CD8+ T cell %CD8+ T cell","CD28+ CD4-CD8- T cell %T cell","CD28+ CD4-CD8- T cell %CD4-CD8- T cell","CD28- CD8dim T cell Absolute Count","CD28- CD8dim T cell %T cell","CD28- CD8dim T cell %CD8dim T cell","CD28- CD8+ T cell Absolute Count","CD28- CD8+ T cell %T cell", "CD28- CD8+ T cell %CD8+ T cell","CD28- CD4-CD8- T cell Absolute Count")
+
+tcell_traits2 <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% tcell_list2)
+
+tcell_list3 <- c("CD28- CD4-CD8- T cell %T cell","CD28- CD4-CD8- T cell %CD4-CD8- T cell","CD28- CD25++ CD8+ T cell Absolute Count","CD28- CD25++ CD8+ T cell %T cell","CD28- CD25++ CD8+ T cell %CD8+ T cell","CD28- CD127- CD25++ CD8+ T cell Absolute Count","CD28 on secreting CD4 regulatory T cell","CD28 on resting CD4 regulatory T cell","CD28 on CD45RA+ CD4+ T cell","CD28 on CD45RA- CD4 not regulatory T cell","CD28 on CD4+ T cell","CD28 on CD4 regulatory T cell","CD28 on CD39+ secreting CD4 regulatory T cell","CD28 on CD39+ resting CD4 regulatory T cell","CD28 on CD39+ CD8+ T cell","CD28 on CD39+ CD4+ T cell","CD28 on CD39+ activated CD4 regulatory T cell","CD28 on CD28+ CD45RA+ CD8+ T cell","CD28 on CD28+ CD45RA- CD8+ T cell","CD28 on CD28+ CD4+ T cell","CD28 on CD28+ CD4-CD8- T cell","CD28 on activated CD4 regulatory T cell","CD28 on activated & secreting CD4 regulatory T cell","CD25++ CD8+ T cell Absolute Count","CD25++ CD8+ T cell %T cell","CD25++ CD8+ T cell %CD8+ T cell","CD25++ CD45RA+ CD4 not regulatory T cell Absolute Count","CD25++ CD45RA+ CD4 not regulatory T cell %T cell","CD25++ CD45RA+ CD4 not regulatory T cell %CD4+ T cell","CD25++ CD45RA- CD4 not regulatory T cell Absolute Count","CD25++ CD45RA- CD4 not regulatory T cell %T cell","CD25++ CD45RA- CD4 not regulatory T cell %CD4+ T cell","CD25++ CD4+ T cell Absolute Count","CD25++ CD4+ T cell %T cell","CD25++ CD4+ T cell %CD4+ T cell","CD25 on secreting CD4 regulatory T cell","CD25 on resting CD4 regulatory T cell","CD25 on CD45RA+ CD4 not regulatory T cell","CD25 on CD45RA- CD4 not regulatory T cell","CD25 on CD4+ T cell","CD25 on CD39+ secreting CD4 regulatory T cell","CD25 on CD39+ resting CD4 regulatory T cell","CD25 on CD39+ CD4+ T cell","CD25 on CD39+ CD4 regulatory T cell","CD25 on CD39+ activated CD4 regulatory T cell","CD25 on CD28+ CD4+ T cell","CD25 on activated CD4 regulatory T cell","CD127- CD8+ T cell Absolute Count","CD127 on CD8+ T cell","CD127 on CD45RA+ CD4+ T cell","CD127 on CD45RA- CD4 not regulatory T cell","CD127 on CD4+ T cell","CD127 on CD28+ CD45RA+ CD8+ T cell","CD127 on CD28+ CD45RA- CD8+ T cell","CD127 on CD28+ CD4+ T cell","CD127 on CD28+ CD4-CD8- T cell","CD127 on CD28- CD8+ T cell","CCR7 on naive CD8+ T cell","CCR7 on naive CD4+ T cell","Activated CD4 regulatory T cell Absolute Count","Activated CD4 regulatory T cell %CD4 regulatory T cell","Activated & secreting CD4 regulatory T cell Absolute Count","Activated & secreting CD4 regulatory T cell %CD4+ T cell","Activated & secreting CD4 regulatory T cell %CD4 regulatory T cell","Activated & resting CD4 regulatory T cell Absolute Count","Activated & resting CD4 regulatory T cell %CD4+ T cell","Activated & resting CD4 regulatory T cell %CD4 regulatory T cell")
+
+tcell_traits3 <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% tcell_list3)
+
+  ## B cells - keywords "B cell"
+bcell_list <- c("B cell %CD3- lymphocyte","B cell %lymphocyte","B cell Absolute Count","B cell lymphocyte profile difference","BAFF-R on B cell","BAFF-R on CD20- B cell","BAFF-R on CD20- CD38- B cell","BAFF-R on CD24+ CD27+ B cell","BAFF-R on IgD- CD24- B cell","BAFF-R on IgD- CD27- B cell","BAFF-R on IgD- CD38- B cell","BAFF-R on IgD- CD38+ B cell","BAFF-R on IgD- CD38dim B cell","BAFF-R on IgD+ B cell","BAFF-R on IgD+ CD24- B cell","BAFF-R on IgD+ CD24+ B cell","BAFF-R on IgD+ CD38- B cell","BAFF-R on IgD+ CD38+ B cell","BAFF-R on IgD+ CD38dim B cell","BAFF-R on memory B cell","BAFF-R on naive-mature B cell","BAFF-R on switched memory B cell","BAFF-R on transitional B cell","BAFF-R on unswitched memory B cell","CD19 on B cell","CD19 on CD20- CD38- B cell","CD19 on CD24+ CD27+ B cell","CD19 on IgD- CD27- B cell","CD19 on IgD- CD38- B cell","CD19 on IgD- CD38dim B cell","CD19 on IgD+ B cell","CD19 on IgD+ CD24- B cell","CD19 on IgD+ CD24+ B cell","CD19 on IgD+ CD38- B cell","CD19 on IgD+ CD38+ B cell","CD19 on IgD+ CD38dim B cell","CD19 on memory B cell","CD19 on naive-mature B cell","CD19 on switched memory B cell","CD19 on transitional B cell","CD19 on unswitched memory B cell","CD20 on B cell","CD20 on CD24+ CD27+ B cell","CD20 on IgD- CD24- B cell","CD20 on IgD- CD27- B cell","CD20 on IgD- CD38- B cell","CD20 on IgD- CD38dim B cell","CD20 on IgD+ B cell","CD20 on IgD+ CD24- B cell","CD20 on IgD+ CD24+ B cell","CD20 on IgD+ CD38- B cell","CD20 on IgD+ CD38+ B cell","CD20 on IgD+ CD38dim B cell","CD20 on memory B cell","CD20 on naive-mature B cell","CD20 on switched memory B cell","CD20 on transitional B cell","CD20 on unswitched memory B cell","CD20- CD38- B cell %B cell","CD24 on CD24+ CD27+ B cell","CD24 on IgD- CD38- B cell","CD24 on IgD- CD38dim B cell","CD24 on IgD+ CD24+ B cell","CD24 on IgD+ CD38- B cell","CD24 on IgD+ CD38+ B cell","CD24 on memory B cell","CD24 on switched memory B cell","CD24 on transitional B cell","CD24 on unswitched memory B cell","CD24+ CD27+ B cell %B cell","CD24+ CD27+ B cell %lymphocyte","CD24+ CD27+ B cell Absolute Count","CD25 on B cell","CD25 on CD24+ CD27+ B cell","CD25 on IgD- CD24- B cell","CD25 on IgD- CD27- B cell")
+
+bcell_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% bcell_list)
+
+bcell2_list <- c("CD25 on IgD- CD38- B cell","CD25 on IgD- CD38dim B cell","CD25 on IgD+ B cell","CD25 on IgD+ CD24- B cell","CD25 on IgD+ CD24+ B cell","CD25 on IgD+ CD38- B cell","CD25 on IgD+ CD38+ B cell","CD25 on IgD+ CD38dim B cell","CD25 on memory B cell","CD25 on naive-mature B cell","CD25 on switched memory B cell","CD25 on transitional B cell","CD25 on unswitched memory B cell","CD27 on CD24+ CD27+ B cell","CD27 on IgD- CD38- B cell","CD27 on IgD- CD38+ B cell","CD27 on IgD- CD38dim B cell","CD27 on IgD+ CD24+ B cell","CD27 on memory B cell","CD27 on switched memory B cell","CD27 on unswitched memory B cell","CD38 on IgD- CD38dim B cell","CD38 on IgD+ B cell","CD38 on IgD+ CD24- B cell","CD38 on IgD+ CD38+ B cell","CD38 on IgD+ CD38dim B cell","CD38 on naive-mature B cell","CD38 on transitional B cell","CD45 on B cell","Diffuse large B cell lymphoma","HLA DR on B cell","IgD on IgD+ B cell","IgD on IgD+ CD24- B cell","IgD on IgD+ CD24+ B cell","IgD on IgD+ CD38-  B cell","IgD on IgD+ CD38+ B cell","IgD on IgD+ CD38dim B cell","IgD on transitional B cell","IgD on unswitched memory B cell","IgD- CD27- B cell %B cell","IgD- CD27- B cell %lymphocyte","IgD- CD27- B cell Absolute Count","IgD- CD38- B cell %lymphocyte","IgD- CD38- B cell Absolute Count","IgD- CD38+ B cell %B cell","IgD- CD38dim B cell %lymphocyte","IgD+ B cell %B cell","IgD+ B cell %Lymphocyte","IgD+ B cell Absolute Count","IgD+ CD24- B cell %B cell","IgD+ CD24- B cell %lymphocyte","IgD+ CD24- B cell Absolute Count","IgD+ CD24+ B cell %B cell","IgD+ CD24+ B cell %lymphocyte","IgD+ CD24+ B cell Absolute Count","IgD+ CD38- B cell %B cell","IgD+ CD38- B cell %lymphocyte","IgD+ CD38- B cell Absolute Count","IgD+ CD38+ B cell %B cell","IgD+ CD38+ B cell %lymphocyte","IgD+ CD38+ B cell Absolute Count","IgD+ CD38dim B cell %lymphocyte","IgD+ CD38dim B cell Absolute Count","Memory B cell %B cell","Memory B cell %lymphocyte","Memory B cell Absolute Count","Naive-mature B cell %B cell","Naive-mature B cell %lymphocyte","Naive-mature B cell Absolute Count","Plasma Blast-Plasma Cell %B cell","Switched memory B cell %lymphocyte","Switched memory B cell Absolute Count","T/B cell","Transitional B cell Absolute Count","Unswitched memory B cell %B cell","Unswitched memory B cell %lymphocyte","Unswitched memory B cell Absolute Count")
+
+bcell2_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% bcell2_list)
+
+  ## Antibodies production - keywords "IgA","IgG","IgM","IgD","IgE"
+igs_list <- c("IgA nephropathy", "Serum IgA levels","IgA levels", "Selective IgA deficiency", "Serum galactose-deficient IgA1 levels", "Serum galactose-deficient IgA1 levels in IgA nephropathy","Composite immunoglobulin trait (IgA/IgG)","Composite immunoglobulin trait (IgA x IgG x IgM)","Composite immunoglobulin trait (IgA x IgG/IgM)","Composite immunoglobulin trait (IgA x IgG)","Composite immunoglobulin trait (IgA/IgM)", "IgG glycosylation","IgG levels","IgG N-glycosylation phenotypes (multivariate analysis)", "Immunoglobulin light chain (AL) amyloidosis (serum IgG profile)","IgG bisecting N-acetyl glucosamine phenotypes (multivariate analysis)","IgG sialylation phenotypes (multivariate analysis)","IgG galactosylation phenotypes (multivariate analysis)","IgG disialylation phenotypes (multivariate analysis)","IgG monogalactosylation phenotypes (multivariate analysis)", "IgG digalactosylation phenotypes (multivariate analysis)","IgG fucosylation phenotypes (multivariate analysis)", "IgG monosialylation phenotypes (multivariate analysis)", "IgG glycosylation patterns", "IgM levels", "Immunoglobulin superfamily DCC subclass member 4 levels (IGDCC4.9793.145.3)","Immunoglobulin superfamily DCC subclass member 3 levels (IGDCC3.11952.1.3)","IgE levels", "Serum IgE levels", "IgE level (plasma)")
+
+igs_traits <- filter(Complete_db,
+                      `DISEASE/TRAIT` %in% igs_list)
+
+# Join information
+adaptive <- bind_rows(tcell_traits, tcell_traits2, tcell_traits3, bcell_traits, bcell2_traits, igs_traits)
+```
+
+## STEP 6: Join data
+
+```{r MergeData}
+# Merge data
+snp_list <- bind_rows(innate, antigen_presentation, adaptive)
+
+dim(snp_list)
+```
+
+```{r RenameAncestries}
+# Remove empty columns
+gwas_data <- snp_list %>%
+  select(-`NUMBER OF CASES`, -`NUMBER OF CONTROLS`, -`SAMPLE DESCRIPTION`)
+
+# Assign a general ancestry (Asian, American, European, African, Multiethnic) to each row
+gwas_data$general_ancestry <- gwas_data$`BROAD ANCESTRAL CATEGORY` #new column for the general ancestry assignment
+
+# Create a recoding vector for general_ancestry
+ancestry_replacements <- c(
+  "East Asian" = "Asian",
+  "Asian unspecified" = "Asian",
+  "South Asian" = "Asian",
+  "South East Asian" = "Asian",
+  "Asian unspecified, East Asian" = "Asian",
+  "South Asian, Asian unspecified" = "Asian",
+  "African unspecified" = "African",
+  "African American or Afro-Caribbean" = "African",
+  "African American or Afro-Caribbean, African unspecified" = "African",
+  "Sub-Saharan African" = "African",
+  "African American or Afro-Caribbean, Hispanic or Latin American, Asian unspecified, European" = "Multiethnic",
+  "Greater Middle Eastern (Middle Eastern, North African or Persian)" = "Multiethnic",
+  "South Asian, European" = "Multiethnic",
+  "African American or Afro-Caribbean, African unspecified, European, East Asian, Hispanic or Latin American, South Asian" = "Multiethnic",
+  "African American or Afro-Caribbean, Hispanic or Latin American" = "Multiethnic",
+  "African unspecified, European, Hispanic or Latin American" = "Multiethnic",
+  "European, Hispanic or Latin American, African American or Afro-Caribbean" = "Multiethnic",
+  "European, African American or Afro-Caribbean" = "Multiethnic",
+  "European, Hispanic or Latin American, Asian unspecified, African unspecified" = "Multiethnic",
+  "Asian unspecified, Oceanian" = "Multiethnic",
+  "European, NR" = "Multiethnic",
+  "NR, European" = "Multiethnic",
+  "Other" = "Other/No reported",
+  "NR" = "Other/No reported",
+  "Hispanic or Latin American" = "Latin American/Native American descent"
+)
+
+# Apply recoding at once
+gwas_data <- gwas_data %>%
+  mutate(general_ancestry = recode(general_ancestry, !!!ancestry_replacements))
+
+ancestries_names <- gwas_data %>%
+  select(general_ancestry) %>%
+  distinct()
+  
+head(gwas_data)
+```
+
+Check
+
+```{r}
+unique(gwas_data$general_ancestry)
+```
+
+Dimensions
+
+```{r}
+dim(gwas_data)
+```
+
+## STEP 7: Preparation and integration of the data
+
+```{r gwas_data data}
+# Rename classification
+
+# ------- # 1) General Ancestry ---------------
+gwas_data <- gwas_data %>%
+  mutate(general_ancestry = case_when(
+    # > Asian
+    general_ancestry %in% c("East Asian", "Asian unspecified", "South Asian", 
+                            "South East Asian", "Asian unspecified, East Asian", 
+                            "South Asian, Asian unspecified") ~ "Asian",
+    # > African
+    general_ancestry %in% c("African unspecified", "African American or Afro-Caribbean", 
+                            "African American or Afro-Caribbean, African unspecified", 
+                            "Sub-Saharan African") ~ "African",
+    # > Multiethnic
+    general_ancestry %in% c("African American or Afro-Caribbean, Hispanic or Latin American, Asian unspecified, European", "Greater Middle Eastern (Middle Eastern, North African or Persian)", "South Asian, European", "African American or Afro-Caribbean, African unspecified, European, East Asian, Hispanic or Latin American, South Asian","African American or Afro-Caribbean, Hispanic or Latin American", "African unspecified, European, Hispanic or Latin American", "European, Hispanic or Latin American, African American or Afro-Caribbean", "European, African American or Afro-Caribbean", "European, Hispanic or Latin American, Asian unspecified, African unspecified", "Asian unspecified, Oceanian", 
+                            "European, NR", "NR, European") ~ "Multiethnic",
+    # > Other/No reported
+    general_ancestry %in% c("Other", "NR") ~ "Other/No reported",
+    # Keep original value if it does not match any category
+    TRUE ~ general_ancestry  
+  )) 
+
+# ------- # 2) Assign abbreviations for sub-ancestries---------------
+
+gwas_data$sp_ancestry <- gwas_data$`BROAD ANCESTRAL CATEGORY`
+gwas_data <- gwas_data %>%
+  ## Asian (EA= east asian, As_U= Asian unspecified, As=Asian, As_SE= South east asian, As_S=South asian)
+  mutate( sp_ancestry = replace( sp_ancestry,  sp_ancestry == "East Asian", "EA")) %>%
+  mutate( sp_ancestry = replace( sp_ancestry,  sp_ancestry == "Asian unspecified", "As")) %>%
+  mutate(sp_ancestry = replace(sp_ancestry, sp_ancestry == "South Asian", "As_S")) %>%
+  mutate(sp_ancestry = replace(sp_ancestry, sp_ancestry == "South East Asian", "As_SE")) %>%
+  mutate(sp_ancestry = replace(sp_ancestry, sp_ancestry == "Asian unspecified, East Asian", "As")) %>%
+  mutate( sp_ancestry = replace( sp_ancestry, sp_ancestry== "South Asian, Asian unspecified", "As")) %>%
+  mutate( sp_ancestry = replace( sp_ancestry, sp_ancestry== "Asian", "As")) %>%
+  
+  ## African (AFR = Africa, AFR_U = African usespecified, AFR_Am = African American, AFR_Ca = Afro-Caribbean, SSA = African Sub-Saharian )
+  mutate( sp_ancestry= replace( sp_ancestry,  sp_ancestry == "African unspecified", "AFR")) %>%
+  mutate( sp_ancestry = replace( sp_ancestry, sp_ancestry == "African American or Afro-Caribbean", "AFR_Am")) %>%
+  mutate( sp_ancestry = replace( sp_ancestry,  sp_ancestry== "African American or Afro-Caribbean, African unspecified", "AFR")) %>%
+  mutate( sp_ancestry = replace( sp_ancestry,  sp_ancestry == "Sub-Saharan African", "SSA")) %>%   
+  
+  ## Latin American \n Native American descendants (LA/NA)
+  mutate( sp_ancestry= replace( sp_ancestry,  sp_ancestry == "Native American", "NA")) %>% 
+  mutate( sp_ancestry= replace( sp_ancestry, sp_ancestry == "Hispanic or Latin American", "LA/NAd")) %>% 
+  
+  ## Multiethnic (Greater Middle Eastern (Middle Eastern, North African or Persian)=GME)
+  mutate( sp_ancestry = replace( sp_ancestry,  sp_ancestry == "African American or Afro-Caribbean, Hispanic or Latin American, Asian unspecified, European", "AFR,LA/NA,As,EUR")) %>%  
+  mutate( sp_ancestry = replace( sp_ancestry,  sp_ancestry == "Greater Middle Eastern (Middle Eastern, North African or Persian)", "GME")) %>%
+  mutate( sp_ancestry = replace( sp_ancestry,  sp_ancestry == "South Asian, European", "As,EUR")) %>%
+  mutate( sp_ancestry = replace( sp_ancestry,  sp_ancestry == "African American or Afro-Caribbean, African unspecified, European, East Asian, Hispanic or Latin American, South Asian", "AFR,EUR,As,LA/NA")) %>%
+  mutate( sp_ancestry= replace( sp_ancestry,  sp_ancestry == "African American or Afro-Caribbean, Hispanic or Latin American", "AFR,LA/NA")) %>%
+  mutate( sp_ancestry = replace( sp_ancestry, sp_ancestry == "African unspecified, European, Hispanic or Latin American", "AFR,EUR,LA/NA")) %>%
+  mutate( sp_ancestry = replace( sp_ancestry,  sp_ancestry == "European, Hispanic or Latin American, African American or Afro-Caribbean", "EUR,LA/NA,AFR")) %>%
+  mutate( sp_ancestry = replace( sp_ancestry,  sp_ancestry == "European, African American or Afro-Caribbean", "EUR,AFR")) %>%   
+  mutate( sp_ancestry = replace( sp_ancestry,  sp_ancestry == "European, Hispanic or Latin American, Asian unspecified, African unspecified", "EUR,LA/NA,As,AFR")) %>%  
+  mutate( sp_ancestry= replace( sp_ancestry,  sp_ancestry == "Asian unspecified, Oceanian", "As,O")) %>%  
+ 
+  ## Other/No reported 
+  mutate( sp_ancestry = replace( sp_ancestry,  sp_ancestry== "Asian unspecified, Oceanian", "Other")) %>%  
+  mutate( sp_ancestry = replace( sp_ancestry,  sp_ancestry == "European, NR", "Other")) %>%
+  mutate( sp_ancestry = replace( sp_ancestry,  sp_ancestry == "NR, European", "Other")) %>%  
+  mutate( sp_ancestry = replace( sp_ancestry,  sp_ancestry == "Other", "Other")) %>%  
+  mutate( sp_ancestry = replace( sp_ancestry,  sp_ancestry== "NR", "Other")) %>%  
+  mutate( sp_ancestry = replace( sp_ancestry,  sp_ancestry== "European", "EUR")) %>% 
+  mutate( sp_ancestry = replace( sp_ancestry,  sp_ancestry== "Oceanian", "O")) %>% 
+  mutate( general_ancestry = replace( general_ancestry,  general_ancestry== "European", "EUR")) %>% 
+  mutate( general_ancestry = replace( general_ancestry,  general_ancestry== "African", "AFR")) %>%
+  mutate( general_ancestry = replace( general_ancestry,  general_ancestry== "Asian", "As")) %>% 
+  mutate( general_ancestry = replace( general_ancestry,  general_ancestry== "Multiethnic", "ME")) %>%
+  mutate( general_ancestry = replace( general_ancestry,  general_ancestry== "Latin American/Native American descendant", "LA/NA"))%>%
+  mutate( general_ancestry = replace( general_ancestry,  general_ancestry== "Other/No reported", "Other"))%>%
+  mutate( general_ancestry = replace( general_ancestry,  general_ancestry== "Oceanian", "O"))
+
+# ------- # 3) Grouping by continent of recruitment---------------
+
+gwas_data <- gwas_data  %>%
+  mutate(recruitment_cont = case_when(
+    # > North America
+    `COUNTRY OF RECRUITMENT` %in% c("Canada", "Canada, U.S.", "U.S.", "U.S., Canada") ~ "North America",
+    # > Europe
+    `COUNTRY OF RECRUITMENT` %in% c("Belgium, Germany", "Croatia", "Denmark", "Estonia", "Finland", "Finland, U.K.", "Finland, U.K., Switzerland, France", "France", "Germany", "Germany, Netherlands", "Germany, Netherlands, Finland, Sweden, U.K.", "Germany, U.K.", "Greece", "Iceland", "Italy", "Italy, Norway", "Italy, U.K.", "Netherlands", "Netherlands, Germany", "Netherlands, U.K.", "Poland", "Poland, Czech Republic, Italy, Turkey, Germany, U.K., Hungary, France","Spain", "Sweden", "Sweden, Denmark, U.K., Germany, Estonia, Croatia", "Sweden, U.K., Croatia", "Sweden, Finland, Iceland", "U.K.", "Switzerland") ~ "Europe",
+    # > Asia
+    `COUNTRY OF RECRUITMENT` %in% c("China", "China, China, Hong Kong SAR, Republic of Korea, Singapore, Taiwan", "China, China, Hong Kong SAR, Singapore", "China, Hong Kong SAR, China", "China, Hong Kong SAR, China, Japan, Republic of Korea", "India", "Iran (Islamic Republic of)", "Japan", "Qatar", "Republic of Korea", "Republic of Korea, China, Japan, China, Hong Kong SAR", "Singapore", "Singapore, China", "Taiwan", "China, Japan", "China, Japan, Republic of Korea") ~ "Asia",
+    # > Oceania
+    `COUNTRY OF RECRUITMENT` == "Australia" ~ "Oceania",
+    # > Latin America
+    `COUNTRY OF RECRUITMENT` == "Mexico" ~ "Latin America",
+    # > Africa
+    `COUNTRY OF RECRUITMENT` %in% c("Ghana, Kenya, Nigeria", "Ghana, Nigeria, Kenya", "Ghana, Nigeria, Niger", "South Africa", "Uganda", "Uganda, South Africa") ~ "Africa",
+    # > Russian Federation
+    `COUNTRY OF RECRUITMENT` == "Russian Federation" ~ "Russian Federation",
+    # > North America-Latin America-Europe
+    `COUNTRY OF RECRUITMENT` %in% c("Argentina, Hungary, Spain, Canada, Czech Republic, Sweden, Turkey, U.S., Belgium, Poland, Italy, U.K., France, Germany, Croatia") ~ "North America-Latin America-Europe",
+    # > Europe-Oceania
+    `COUNTRY OF RECRUITMENT` %in% c("Denmark, France, Italy, Sweden, U.K., NR, Australia", "Finland, Sweden, Australia, Italy, Germany, U.K., Croatia, Switzerland") ~ "Europe-Oceania",
+    # > Europe-Oceania-North America
+    `COUNTRY OF RECRUITMENT` %in% c("Finland, Sweden, U.S., Australia, Italy, Netherlands, Greece, Canada, Germany, U.K., Spain, New Zealand, France, Norway, Denmark", "Sweden, U.S., Australia, Italy, Netherlands, Germany, U.K., Denmark.", "Sweden, U.S., Australia, Slovenia, Italy, Netherlands, Canada, Belgium, Germany, U.K., Spain, New Zealand, Lithuania, Norway, Denmark", "U.S., Australia, Austria, France, Germany, Netherlands, Switzerland, China, Denmark, Finland, Iceland, Sweden, U.K., Croatia, Italy, Canada", "U.S., Australia, Austria, France, Germany, Netherlands, Switzerland, Denmark, Estonia, Finland, Iceland, Sweden, U.K., Croatia, Italy") ~ "Europe-Oceania-North America",
+    # > Europe-North America
+    `COUNTRY OF RECRUITMENT` %in% c("Finland, U.S., Iceland, Italy, Netherlands, Germany, U.K., Croatia", "Finland, U.S., Italy, Netherlands, Germany, U.K.", "Netherlands, Sweden, U.S., Belgium, Norway, Italy, U.K., Germany, Estonia", "Sweden, U.S., Canada, Belgium, Germany, U.K., Norway", "Sweden, U.S., Netherlands, Germany, U.K., Spain, France, Denmark", "U.K., Estonia, Finland, Canada, Germany, U.S.", "U.K., U.S., Estonia, Finland, Canada, Germany", "U.K., U.S., Estonia, Finland, Canada, Netherlands, Germany", "U.K., Estonia, U.S., Finland, Canada, Germany", "U.S., Italy", "U.S., Italy, Canada, U.K.", "U.S., Italy, France", "U.S., Netherlands", "U.S., Republic of Ireland", "U.S., Spain") ~ "Europe-North America",
+    # > Europe-Asia
+    `COUNTRY OF RECRUITMENT` == "Japan, U.K." ~ "Europe-Asia",
+    # > Europe-Asia-North America
+    `COUNTRY OF RECRUITMENT` %in% c("U.K., Japan, Estonia, Finland, Canada, Germany, U.S.", "U.K., Japan, Estonia, U.S., Finland, Canada, Germany", "U.K., Japan, Estonia, U.S., Finland, Canada, Netherlands, Germany") ~ "Europe-Asia-North America",
+    # > No reported
+    TRUE ~ "No reported"
+  ))
+
+# ------- # 4) Assigning type of immune response ---------------
+gwas_data <- gwas_data  %>%
+  mutate(response = case_when(
+    # > Physical Barriers
+    `DISEASE/TRAIT` %in% c(
+      "Skin condition",
+      "Rash and other nonspecific skin eruption (PheCode 687.1)",
+      "Disorder of skin and subcutaneous tissue NO (PheCode 689)", 
+      "Degenerative skin conditions and other dermatoses (PheCode 702)", 
+      "Scar conditions and fibrosis of skin (PheCode 701.2)",
+      "Other local infections of skin and subcutaneous tissue (PheCode 686)", 
+      "Gastrointestinal infection", 
+      "Gastrointestinal issues (confirmatory factor analysis Factor 31)",
+      "Asthma in gastrointestinal disease", 
+      "Hemorrhage from gastrointestinal ulcer (PheCode 531.1)", 
+      "Gastrointestinal complications (PheCode 569.2)", 
+      "Gastrointestinal hemorrhage (PheCode 578)",
+      "Inflammatory bowel disease", 
+      "Inflammatory bowel disease (early onset)",
+      "Irritable bowel syndrome", 
+      "Irritable bowel syndrome (MTAG)", 
+      "ICD10 K50, K51: inflammatory bowel disease", 
+      "Irritable bowel syndrome mixed subtype",
+      "B-cell lymphoblastic leukemia or inflammatory bowel disease (pleiotropy)",
+      "Rheumatoid arthritis or irritable bowel disease", 
+      "Leukoplakia of oral mucosa (PheCode 528.6)", 
+      "Normal mucosa of esophagus-specific gene 1 protein levels (NMES1.6406.3.3)", 
+      "Normal mucosa of esophagus-specific gene 1 protein levels", 
+      "Mucosal addressin cell adhesion molecule 1 levels", 
+      "Stomatitis and mucositis (PheCode 528.1)") ~ "Physical Barriers",
+    
+    # > Pattern recognition
+    `DISEASE/TRAIT` %in% c(
+      "Toll-like receptor 1 levels", 
+      "Toll-like receptor 2 levels", 
+      "Toll-like receptor 3 levels", 
+      "Toll-like receptor 4 levels", 
+      "Toll-interacting protein levels (TOLLIP.13963.7.3)", 
+      "Toll-like receptor 4:Lymphocyte antigen 96 complex levels (TLR4.LY96.3647.49.4)", 
+      "Toll-interacting protein levels", 
+      "Toll-like receptor 4:Lymphocyte antigen 96 complex levels",
+      "Toll-like receptor 5 levels", 
+      "Toll-like receptor 1:Extracellular domain levels", 
+      "TLR4 interactor with leucine rich repeats levels", 
+      "TLR4:MD-2 complex level (CSF)",
+      "TLR4:MD-2 complex level (plasma)", 
+      "Serum levels of protein LY96;TLR4", 
+      "Serum levels of protein TLR2", 
+      "TLR4 interactor with leucine rich repeats:Extracellular domain levels",  "TLR3 protein levels", 
+      "C-type lectin domain family 1 member B levels",  "C-type lectin domain family 2 member L levels", 
+      "C-type lectin domain family 1 member A levels", "C-type lectin domain family 5 member A levels", 
+      "C-type lectin domain family 6 member A levels", "C-type lectin domain family 7 member A levels", 
+      "C-type lectin domain family 10 member A levels", "C-type lectin domain family 4 member D levels", 
+      "C-type lectin domain family 4 member G levels", "C-type lectin domain family 4 member C levels", 
+      "C-type lectin domain family 4 member M levels (CLEC4M.3030.3.2)", 
+      "C-type lectin domain family 5 member A levels (CLEC5A.8282.15.3)",  
+      "C-type lectin domain family 12 member A levels (CLEC12A.11187.11.3)", 
+      "C-type lectin domain family 2 member D levels (CLEC2D.7054.87.3)", 
+      "C-type lectin domain family 4 member E levels (CLEC4E.7077.9.4)", 
+      "C-type lectin domain family 4 member K levels (CD207.3361.26.2)", 
+      "C-type lectin domain family 4 member A levels", 
+      "C-type lectin domain family 4 member M levels", 
+      "C-type lectin domain family 12 member A levels", 
+      "C-type lectin domain family 2 member A levels", 
+      "C-type lectin domain family 2 member D levels", 
+      "C-type lectin domain family 4 member G (analyte X10781.19) levels", 
+      "C-type lectin domain family 4 member K levels", 
+      "C-type lectin domain family 14 member A levels",
+      "C-type lectin domain family 11 member A levels", 
+      "Antiviral innate immune response receptor RIG-I levels", 
+      "High mobility group protein B1 levels (HMGB1.2524.56.3)",
+      "Heat shock factor-binding protein 1 levels", 
+      "Heat shock protein beta-6 levels", 
+      "Heat shock 70 kDa protein 1A levels",
+      "Heat shock-related 70 kDa protein 2 levels",  
+      "Heat shock protein beta-1 levels",
+      "Activator of 90 kDa heat shock protein ATPase homolog 1 levels", 
+      "Activator of 90 kDa heat shock protein ATPase homolog 1 levels (AHSA1.11633.89.3)",
+      "Heat shock 70 kDa protein 1-like levels (HSPA1L.12041.33.3)",
+      "Heat shock 70 kDa protein 6 levels (HSPA6.13672.3.3)", 
+      "Heat shock 70 kDa protein 6 levels",  
+      "Heat shock protein HSP 90-alpha/beta levels",
+      "Heat shock protein HSP 90-beta levels",
+      "Heat shock cognate 71 kDa protein levels", 
+      "Heat shock factor protein 1 levels",
+      "Heat shock 70 kDa protein 13 levels", 
+      "Heat shock 70 kDa protein 1B levels",
+      "Heat shock 70 kDa protein 1-like levels", 
+      "Heat shock 70 kDa protein 1A (analyte X4124.24) levels", "Heat shock 27 kDa protein levels", 
+      "Uric acid levels", 
+      "Uric acid clearance", 
+      "Serum uric acid levels") ~ "Pattern recognition",
+    
+    # > NK
+    `DISEASE/TRAIT` %in% c(
+      "Natural killer cells antigen CD94 levels", 
+      "Natural cytotoxicity triggering receptor 1 levels",
+      "Natural cytotoxicity triggering receptor 3 ligand 1 levels", 
+      "Natural cytotoxicity triggering receptor 1 levels (NCR1.8360.169.3)",
+      "Natural cytotoxicity triggering receptor 3 levels (NCR3.3003.29.2)", 
+      "Natural killer cell receptor 2B4 levels", 
+      "Natural cytotoxicity triggering receptor 3 levels",
+      "Extranodal natural killer T-cell lymphoma (nasal type)", 
+      "Natural cytotoxicity triggering receptor 1 (analyte X5104.57) levels", 
+      "Natural cytotoxicity triggering receptor 1 (analyte X8360.169) levels",
+      "CD45 on Natural Killer", 
+      "CD45 on Natural Killer T",
+      "CD16-CD56 on Natural Killer T",
+      "CD16-CD56 on Natural Killer",
+      "CD16-CD56 on HLA DR+ Natural Killer",
+      "FSC-A on Natural Killer",
+      "FSC-A on HLA DR+ Natural Killer",    
+      "SSC-A on Natural Killer T",
+      "Natural Killer T Absolute Count",
+      "Natural Killer T %T cell", 
+      "Natural Killer %CD3- lymphocyte",
+      "Natural Killer %lymphocyte",
+      "HLA DR+ Natural Killer Absolute Count",
+      "HLA DR+ Natural Killer %Natural Killer", 
+      "HLA DR+ Natural Killer  %CD3- lymphocyte", 
+      "Natural Killer T %lymphocyte", 
+      "CD8+ Natural Killer T Absolute Count", 
+      "CD8+ Natural Killer T %T cell",
+      "CD8+ Natural Killer T %lymphocyte",
+      "CD8dim Natural Killer T Absolute Count",
+      "CD8dim Natural Killer T %T cell",
+      "CD8dim Natural Killer T %lymphocyte",  
+      "CD4-CD8- Natural Killer T Absolute Count", 
+      "CD4-CD8- Natural Killer T %T cell",
+      "CD4-CD8- Natural Killer T %lymphocyte",
+      "Natural Killer Absolute Count",
+      "Natural killer cell receptor 2B4 level in Chronic kidney disease with hypertension and no diabetes (5063_12)",
+      "Natural cytotoxicity triggering receptor 2 levels") ~ "NK",
+    
+    # > Inflammatory mediators
+    `DISEASE/TRAIT` %in% c(
+      "Exhaled nitric oxide output", 
+      "Exhaled nitric oxide levels",
+      "Fractional exhaled nitric oxide (childhood)",
+      "Nitric oxide synthase, inducible levels",
+      "Nitric oxide synthase, brain levels", 
+      "Nitric oxide synthase, endothelial levels",
+      "Fractional exhaled nitric oxide levels", 
+      "Nitric oxide synthase, endothelial levels") ~ "Inflammatory mediators",
+    
+    # > Leukocytes
+    `DISEASE/TRAIT` %in% c(
+      "White blood cell leukocyte count (UKB data field 30000)",
+      "Leukocyte Absolute Count") ~ "Leukocytes",
+    
+    # > Adhesion molecules
+    `DISEASE/TRAIT` %in% c(
+      "Soluble levels of adhesion molecules", 
+      "epithelial cell adhesion molecule levels",  
+      "Intercellular adhesion molecule 5 levels", 
+      "Intercellular adhesion molecule 3 levels", 
+      "Intercellular adhesion molecule 1 levels", 
+      "Intercellular adhesion molecule 2 levels", 
+      "Intercellular adhesion molecule 4 levels", 
+      "Vascular cell adhesion protein 1 levels",
+      "Adhesion G protein-coupled receptor B3 levels",
+      "Adhesion G-protein coupled receptor D1 levels",
+      "Basal Cell Adhesion Molecule levels",
+      "Adhesion G protein-coupled receptor E1 levels",
+      "Adhesion G-protein coupled receptor G2 levels",
+      "Adhesion G-protein coupled receptor V1 levels",  
+      "Adhesion G protein-coupled receptor F5 levels",
+      "Adhesion G-protein coupled receptor G1 levels",    
+      "Adhesion G protein-coupled receptor E2 levels",  
+      "Platelet endothelial cell adhesion molecule levels", 
+      "Basal Cell Adhesion Molecule levels (BCAM.2816.50.2)", 
+      "Platelet endothelial cell adhesion molecule levels (PECAM1.2695.25.1)",
+      "Adhesion G protein-coupled receptor F5 levels (ADGRF5.6409.57.3)", 
+      "Adhesion G-protein coupled receptor F1 levels (ADGRF1.11243.90.3)",
+      "Vascular cell adhesion protein 1 levels (VCAM1.2967.8.1)",  
+      "Intercellular adhesion molecule 1 (red blood cell fatty acid level interaction)",  
+      "Intercellular adhesion molecule 1 levels",
+      "Intercellular adhesion molecule 1 levels (ICAM1.4342.10.3)",    
+      "Intercellular adhesion molecule 2 levels", 
+      "Intercellular adhesion molecule 2 levels (ICAM2.5486.73.3)",   
+      "Intercellular adhesion molecule 3 levels", 
+      "Intercellular adhesion molecule 4 (analyte X9461.2) levels",    
+      "Intercellular adhesion molecule 4 levels", 
+      "Intercellular adhesion molecule 4 levels (ICAM4.6550.4.3)",    
+      "Intercellular adhesion molecule 5 levels", 
+      "Intercellular adhesion molecule 5 levels (ICAM5.8245.27.3)",    
+      "Platelet endothelial cell adhesion molecule levels", 
+      "Platelet endothelial cell adhesion molecule levels (PECAM1.2695.25.1)",
+      "Soluble levels of adhesion molecules", 
+      "Vascular adhesion protein-1 levels", 
+      "Vascular cell adhesion protein 1 (analyte X20093.9) levels", 
+      "Vascular cell adhesion protein 1 (analyte X2967.8) level", 
+      "Vascular cell adhesion protein 1 levels",
+      "L-selectin levels","L-Selectin levels (SELL.4831.4.2)",
+      "sL-Selectin level (brain)","sL-Selectin level (CSF)", 
+      "E-selectin levels", "E-selectin levels (SELE.3470.1.2)",
+      "sE-Selectin level (CSF)","sE-Selectin level (plasma)", 
+      "Soluble E-selectin levels", 
+      "Soluble E-selectin levels (adjusted for ABO rs2519093 genotypes)", 
+      "P-selectin glycoprotein ligand 1 levels", 
+      "P-selectin glycoprotein ligand 1:Extracellular domain levels", 
+      "P-Selectin level (CSF)",
+      "P-selectin levels",
+      "P-selectin levels (SELP.4154.57.2)") ~ "Adhesion molecules",
+    
+    # > Chemiokines
+    `DISEASE/TRAIT` %in% c(
+      "Endothelial cell-specific chemotaxis regulator levels", 
+      "Leukocyte cell-derived chemotaxin 1 levels", 
+      "Leukocyte cell-derived chemotaxin-2 (analyte X16763.11) levels", 
+      "Leukocyte cell-derived chemotaxin-2 levels", 
+      "C-C motif chemokine 1 levels", "C-C motif chemokine 13 levels", 
+      "C-C motif chemokine 14 levels", 
+      "C-C motif chemokine 14 levels (CCL14.2900.53.3)",
+      "C-C motif chemokine 15 (analyte X14109.15) levels", 
+      "C-C motif chemokine 15 (analyte X18289.16) levels", 
+      "C-C motif chemokine 15 (analyte X3509.1) level",  
+      "C-C motif chemokine 15 levels", 
+      "C-C motif chemokine 15 levels (CCL15.14109.15.3)", 
+      "C-C motif chemokine 16 levels", 
+      "C-C motif chemokine 16 levels (CCL16.4913.78.1)",
+      "C-C motif chemokine 17 levels", 
+      "C-C motif chemokine 17 levels (CCL17.3519.3.2)", 
+      "C-C motif chemokine 18 levels",
+      "C-C motif chemokine 19 levels", 
+      "C-C motif chemokine 19 levels (CCL19.4922.13.1)", 
+      "C-C motif chemokine 2 levels", 
+      "C-C motif chemokine 20 levels", 
+      "C-C motif chemokine 21 levels",
+      "C-C motif chemokine 21 levels (CCL21.2516.57.3)",  
+      "C-C motif chemokine 22 levels",
+      "C-C motif chemokine 22 levels (CCL22.3508.78.3)",
+      "C-C motif chemokine 23 levels", 
+      "C-C motif chemokine 23 levels (CCL23.2913.1.2)", 
+      "C-C motif chemokine 24 levels",
+      "C-C motif chemokine 25 (analyte X14068.29) levels", 
+      "C-C motif chemokine 25 levels", 
+      "C-C motif chemokine 25 levels (CCL25.2705.5.2)", 
+      "C-C motif chemokine 26 levels", 
+      "C-C motif chemokine 27 levels", 
+      "C-C motif chemokine 28 levels", 
+      "C-C motif chemokine 28 levels (CCL28.2890.59.2)", 
+      "C-C motif chemokine 3 levels", 
+      "C-C motif chemokine 3 levels (CCL3.3040.59.1)", 
+      "C-C motif chemokine 3-like 1 levels", 
+      "C-C motif chemokine 3-like 1 levels (CCL3L1.2783.18.2)", 
+      "C-C motif chemokine 4 levels",
+      "C-C motif chemokine 4-like levels",
+      "C-C motif chemokine 5 (analyte X5480.49) levels", 
+      "C-C motif chemokine 5 levels", 
+      "C-C motif chemokine 7 (analyte X4886.3) levels", 
+      "C-C motif chemokine 7 levels", 
+      "C-C motif chemokine 7 levels (CCL7.4886.3.1)", 
+      "C-C motif chemokine 8 (analyte X13748.4) levels", 
+      "C-C motif chemokine 8 levels", 
+      "C-C motif chemokine 8 levels (CCL8.2785.15.2)", 
+      "C-X-C motif chemokine 1 levels", 
+      "C-X-C motif chemokine 10 levels", 
+      "C-X-C motif chemokine 10 levels (CXCL10.4141.79.1)", 
+      "C-X-C motif chemokine 11 levels",
+      "C-X-C motif chemokine 11 levels (CXCL11.3038.9.2)", 
+      "C-X-C motif chemokine 13 levels", 
+      "C-X-C motif chemokine 14 levels",
+      "C-X-C motif chemokine 16 levels",
+      "C-X-C motif chemokine 16 levels (CXCL16.2436.49.4)",
+      "C-X-C motif chemokine 17 levels",
+      "C-X-C motif chemokine 3 levels", 
+      "C-X-C motif chemokine 5 levels", 
+      "C-X-C motif chemokine 5 levels (CXCL5.2979.8.2)", 
+      "C-X-C motif chemokine 6 levels", 
+      "C-X-C motif chemokine 9 (analyte X9188.119) levels", 
+      "C-X-C motif chemokine 9 levels",
+      "X-C motif chemokine ligand 1 levels") ~ "Chemiokines",
+    
+    # > Inflammatory mediators
+    `DISEASE/TRAIT` %in% c(
+      "Histamine N-methyltransferase levels", 
+      "Metabolite levels (1-methylhistamine; _1_methylhistamine)", 
+      "Plasma metabolome feature (hilic_956) (NaNa-Dimethylhistamine)", 
+      "Allergic disease (asthma, hay fever or eczema)", 
+      "Asthma and hay fever",
+      "Hay fever and/or eczema", 
+      "Rheumatic fever",
+      "Scarlet fever", 
+      "Typhoid fever", 
+      "Eicosanoid 11-dehydro-2,3-dinor-TXB2 a levels",
+      "Eicosanoid 11-dehydro-2,3-dinor-TXB2 b levels",
+      "Eicosanoid 11-dehydro-TXB3 a levels",
+      "Eicosanoid 11-dehydro-TXB3 b levels", 
+      "Eicosanoid 11-HETE, Eicosanoid 12-HETE, Eicosanoid 8-HETE levels", 
+      "Eicosanoid 11,12-diHETrE a levels", 
+      "Eicosanoid 11t LTD4 levels",
+      "Eicosanoid 12-HETE, Eicosanoid 8-HETE, Eicosanoid 9-HETE a levels",  
+      "Eicosanoid 12-HETE, Eicosanoid 8-HETE, Eicosanoid 9-HETE b levels", 
+      "Eicosanoid 12-oxoETE a levels", 
+      "Eicosanoid 12,13 diHOME a levels", 
+      "Eicosanoid 12,13 diHOME b levels",
+      "Eicosanoid 12,13 diHOME levels", 
+      "Eicosanoid 12,13 EpOME, Eicosanoid 9,10 EpOME levels", 
+      "Eicosanoid 12oxo LTB4 levels", 
+      "Eicosanoid 12S-HpETE b levels",
+      "Eicosanoid 12S-HpETE c levels", 
+      "Eicosanoid 13-HODE, Eicosanoid 9-HODE a levels", 
+      "Eicosanoid 13-HpODE levels", 
+      "Eicosanoid 13-HpODE, Eicosanoid 9-HpODE b levels",  
+      "Eicosanoid 13-oxoODE a levels", 
+      "Eicosanoid 13-oxoODE b levels", 
+      "Eicosanoid 13-oxoODE c levels", 
+      "Eicosanoid 13(S) HOTrE, Eicosanoid 9(S) HOTrE a levels", 
+      "Eicosanoid 13(S) HOTrE, Eicosanoid 9(S) HOTrE b levels", 
+      "Eicosanoid 13S-HpOTrE(gamma) levels", 
+      "Eicosanoid 14,15-diHETrE b levels", 
+      "Eicosanoid 14,15-diHETrE levels", 
+      "Eicosanoid 14,15-EET, Eicosanoid 5-HETE a levels",
+      "Eicosanoid 14,15-EET, Eicosanoid 5-HETE b levels", 
+      "Eicosanoid 15 oxoEDE levels",
+      "Eicosanoid 15-oxoETE, Eicosanoid 17(18) EpETE levels", 
+      "Eicosanoid 15(S) HETrE, Eicosanoid 8(S) HETrE levels", 
+      "Eicosanoid 15d PGD2 levels", 
+      "Eicosanoid 15R-PGE2, Eicosanoid 8-iso-15-keto-PGF2alpha a levels", 
+      "Eicosanoid 15R-PGE2, Eicosanoid 8-iso-15-keto-PGF2alpha b levels", 
+      "Eicosanoid 15S-HpETE levels",    
+      "Eicosanoid 17-HETE, Eicosanoid 18(+/-)-HETE, Eicosanoid 20-HETE levels", 
+      "Eicosanoid 17(18) EpETE levels", 
+      "Eicosanoid 19(R)-HETE, Eicosanoid 20-HETE levels", 
+      "Eicosanoid 20cooh AA b levels", 
+      "Eicosanoid 20cooh AA c levels",
+      "Eicosanoid 5-oxoETE b levels", 
+      "Eicosanoid 5-oxoETE levels", 
+      "Eicosanoid 5,6-diHETrE b levels",
+      "Eicosanoid 5(S) HETrE b levels", 
+      "Eicosanoid 5(S) HETrE levels", 
+      "Eicosanoid 5S-HpEPE levels", 
+      "Eicosanoid 5S-HpETE a levels", 
+      "Eicosanoid 5S-HpETE b levels", 
+      "Eicosanoid 5S-HpETE c levels", 
+      "Eicosanoid 8-iso-PGA1, Eicosanoid PGA1 a levels", 
+      "Eicosanoid 8-iso-PGA2 levels", 
+      "Eicosanoid 8-iso-PGF1a, Eicosanoid 8-iso-PGF1b, Eicosanoid PGF1beta a levels", 
+      "Eicosanoid 8(S) HETrE levels", 
+      "Eicosanoid 9-HODE levels",
+      "Eicosanoid 9-oxoODE a levels",
+      "Eicosanoid 9-oxoODE c levels", 
+      "Eicosanoid 9-oxoOTrE a levels",
+      "Eicosanoid 9-oxoOTrE b levels",  
+      "Eicosanoid 9,10 diHOME levels", 
+      "Eicosanoid 9(S) HOTrE levels", 
+      "Eicosanoid 9S-HpOTrE levels", 
+      "Eicosanoid PDX, Eicosanoid Resolvin D5 levels", 
+      "Eicosanoid tetranor 12(R) HETE a levels",
+      "Eicosanoid tetranor 12(R) HETE b levels", 
+      "Eicosanoid tetranor 12(R) HETE levels", 
+      "Hematopoietic prostaglandin D synthase levels",
+      "15-hydroxyprostaglandin dehydrogenase [NAD(+)] levels (HPGD.4995.16.1)", 
+      "Prostaglandin F2 receptor negative regulator levels (PTGFRN.12727.7.3)",
+      "Prostaglandin reductase 1 levels (PTGR1.13543.7.3)",
+      "Prostaglandin-H2 D-isomerase levels (PTGDS.10514.5.3)",
+      "Hematopoietic prostaglandin D synthase levels (HPGDS.12549.33.3)",
+      "Prostaglandin reductase 1 levels", 
+      "Prostaglandin-H2 D-isomerase levels", 
+      "Prostaglandin E synthase 2 levels",
+      "Prostaglandin reductase 2 levels", 
+      "Prostaglandin reductase 3 levels",  
+      "Prostaglandin E synthase 3 levels",  
+      "Prostaglandin F2 receptor negative regulator levels",
+      "15-hydroxyprostaglandin dehydrogenase [NAD(+)] levels", 
+      "8-isoprostaglandin-F2alpha x bisphenol A interaction",
+      "8-isoprostaglandin-F2alpha x triclosan interaction", 
+      "Prostaglandin reductase 1 (analyte X19617.5) levels",  
+      "Prostaglandin reductase 1 (analyte X13543.7) levels",
+      "Prostaglandin levels (331.192_0.337)",   
+      "Prostaglandin/Lipoxin/Leukotriene levels (351.2178_0.341)",
+      "Leukotriene/HpETE/DiHETE/Prostaglandin/Hepoxilin levels (335.222_0.372)",
+      "Leukotriene/HpEPE/Prostaglandin levels (333.2072_0.339)", 
+      "Cytochrome P450 3A4 levels", 
+      "NADPH--cytochrome P450 reductase levels") ~ "Inflammatory mediators",
+    
+  # > Coagulation cascade
+    `DISEASE/TRAIT` %in% c(
+      "Thrombin-induced platelet aggregation", 
+      "Thrombin-activatable fibrinolysis inhibitor levels", 
+      "Thrombin-activatable fibrinolysis inhibitor activation peptide", 
+      "Thrombin levels", 
+      "Thrombin generation potential phenotypes", 
+      "Prothrombin time", 
+      "Prothrombin levels", 
+      "Coagulation factor levels", 
+      "End-stage coagulation", 
+      "Coagulation Factor VIII levels (F8.13499.30.3)", 
+      "Coagulation Factor X levels (F10.4878.3.1)",
+      "Coagulation factor Xa levels (F10.3077.66.2)", 
+      "Coagulation Factor XI levels",   
+      "Coagulation factor XII levels",
+      "Coagulation factor XIII B chain levels", 
+      "Coagulation factor IX levels", 
+      "Coagulation Factor X levels", 
+      "Coagulation Factor VII levels",  
+      "Coagulation factor IXab levels", 
+      "Coagulation Factor V levels",  
+      "Coagulation Factor VIII levels", 
+      "Coagulation factor Xa levels",  
+      "Coagulation factor XIII levels", 
+      "Coagulation Factor XI level (plasma)",  
+      "Coagulation Factor V level (CSF)", 
+      "Coagulation Factor VII level (CSF)", 
+      "Coagulation Factor VII level (plasma)",
+      "Thromboxane-A synthase levels") ~ "Coagulation cascade",
+   
+   # > Growth factors
+    `DISEASE/TRAIT` %in% c(
+      "Platelet-derived growth factor subunit A levels", "Platelet-derived growth factor subunit B levels",
+      "Platelet-derived growth factor receptor alpha levels", 
+      "Platelet-derived growth factor receptor beta levels","Platelet-derived growth factor C levels",  
+      "Platelet-derived growth factor D levels (PDGFD.9341.1.3)",  
+      "Platelet-derived growth factor receptor alpha levels (PDGFRA.10366.11.3)",  
+      "Platelet-derived growth factor receptor beta levels (PDGFRB.3459.49.2)",  
+      "Platelet-derived growth factor receptor-like protein levels (PDGFRL.9713.67.3)",  
+      "Platelet-derived growth factor subunit A levels (PDGFA.4499.21.1)",  
+      "Platelet-derived growth factor subunit B levels (PDGFB.4149.8.2)",  
+      "Platelet-derived growth factor receptor-like protein levels",  
+      "Platelet-derived growth factor D levels",  
+      "Platelet-derived growth factor BB levels",  
+      "Platelet-derived growth factor D (analyte X9341.1) levels",  
+      "Platelet-derived growth factor D (analyte X17140.57) levels",
+      "Platelet-derived growth factor C (analyte X13658.31) levels",
+      "PDGF Rb level (CSF)",  
+      "PDGFRA level (plasma)",
+      "PDGF-CC level (plasma)", 
+      "PDGF Rb level (plasma)",  
+      "Serum levels of protein PDGFA",  
+      "Serum levels of protein PDGFB",
+      "Serum levels of protein PDGFD",  
+      "Serum levels of protein PDGFRA",  
+      "Serum levels of protein PDGFRL",  
+      "PDGF-BB protein levels",  
+      "Transforming growth factor-beta-induced protein ig-h3 levels",  
+      "Protransforming growth factor alpha [Cleaved into: Transforming growth factor alpha levels", 
+      "Transforming growth factor beta-1 proprotein [Cleaved into: Latency-associated peptide levels",  
+      "Transforming growth factor beta-2 proprotein levels",
+      "Transforming growth factor beta receptor type 3 levels", 
+      "Latent-transforming growth factor beta-binding protein 2 levels", 
+      "Latent-transforming growth factor beta-binding protein 3 levels", 
+      "Transforming growth factor beta-3 levels (TGFB3.3520.58.1)",  
+      "Transforming growth factor-beta-induced protein ig-h3 levels (TGFBI.3283.21.1)", 
+      "Transforming growth factor beta-2 levels",
+      "Transforming growth factor beta-3 levels",   
+      "Latency-associated peptide transforming growth factor beta 1 levels", 
+      "Latent-transforming growth factor beta-binding protein 4 levels",  
+      "Transforming growth factor beta-1 (analyte X14108.15) levels",
+      "TGF-beta-activated kinase 1 and MAP3K7-binding protein 2 levels",
+      "TGF-beta receptor type-2 levels",
+      "Prostaglandin F2 receptor negative regulator levels (PTGFRN.12727.7.3)",  
+      "Transforming growth factor beta-3 levels (TGFB3.3520.58.1)",    
+      "Transforming growth factor-beta-induced protein ig-h3 levels (TGFBI.3283.21.1)", 
+      "TGF-b R III level (plasma)", 
+      "LAP TGFbeta1 levels","TGF alpha levels",
+      "Serum levels of protein PTGFRN", 
+      "Serum levels of protein CTGF", 
+      "Serum levels of protein TGFB1",
+      "Serum levels of protein TGFB3",
+      "Serum levels of protein TGFBI",
+      "TGFA protein levels",
+      "Fibroblast growth factor 5 levels",   
+      "Fibroblast growth factor-binding protein 1 levels",
+      "Fibroblast growth factor-binding protein 2 levels", 
+      "Fibroblast growth factor receptor 4 levels", 
+      "Fibroblast growth factor receptor 2 levels", 
+      "Fibroblast growth factor 16 levels", 
+      "Fibroblast growth factor 19 levels",
+      "Fibroblast growth factor-binding protein 3 levels",
+      "Fibroblast growth factor 21 levels", 
+      "Fibroblast growth factor 23 levels",
+      "Fibroblast growth factor 2 levels",
+      "Fibroblast growth factor 16 levels (FGF16.13725.3.3)",  
+      "Fibroblast growth factor 19 levels (FGF19.2762.30.2)", 
+      "Fibroblast growth factor 7 levels (FGF7.14031.18.3)", 
+      "Fibroblast growth factor 8 isoform A levels (FGF8.4394.71.2)",  
+      "Circulating fibroblast growth factor 21 levels",
+      "Circulating fibroblast growth factor 23 levels",  
+      "Fibroblast growth factor receptor-like 1 levels",  
+      "Acidic fibroblast growth factor intracellular-binding protein levels", 
+      "Fibroblast growth factor 10 levels",  
+      "Fibroblast growth factor 12 levels", 
+      "Fibroblast growth factor 17 levels", 
+      "Fibroblast growth factor 18 levels", 
+      "Fibroblast growth factor 20 levels", 
+      "Fibroblast growth factor 22 levels", 
+      "Fibroblast growth factor 3 levels",
+      "Fibroblast growth factor 4 levels",  
+      "Fibroblast growth factor 6 levels",  
+      "Fibroblast growth factor 7 levels",  
+      "Fibroblast growth factor 8 levels",
+      "Fibroblast growth factor 8 isoform B levels",  
+      "Fibroblast growth factor 8 isoform F levels",
+      "Fibroblast growth factor 9 levels",  
+      "Fibroblast growth factor receptor 1 levels",  
+      "Fibroblast growth factor receptor 3 levels",
+      "Fibroblast growth factor receptor substrate 2 levels",  
+      "Fibroblast growth factor basic levels", 
+      "Fibroblast growth factor 19 (analyte X2762.30) levels",
+      "Fibroblast growth factor 7 (analyte X4487.1) levels",
+      "Fibroblast growth factor 7 (analyte X14031.18) levels",  
+      "Fibroblast growth factor 19 (analyte X13724.27) levels",  
+      "Fibroblast growth factor receptor-like 1 (analyte X6237.11) levels", 
+      "Fibroblast growth factor 8 isoform A levels",  
+      "FGFR1 oncogene partner levels",
+      "Fibroblast growth factor 16 levels (FGF16.13725.3.3)", 
+      "Fibroblast growth factor 19 levels (FGF19.2762.30.2)",   
+      "Fibroblast growth factor 7 levels (FGF7.14031.18.3)",  
+      "Fibroblast growth factor 8 isoform A levels (FGF8.4394.71.2)",  
+      "FGF7 level (CSF)",  
+      "FGF-19 level (plasma)",
+      "FGF-19 level (CSF)",  
+      "Serum levels of protein FGF10",  
+      "Serum levels of protein FGF19",
+      "Serum levels of protein FGF7"="IGrowth factors",   
+      "Serum levels of protein FGFBP1", 
+      "Serum levels of protein FGFBP3", 
+      "Serum levels of protein FGFR3",
+      "Serum levels of protein FGFRL1",  
+      "FGF5 protein levels",  
+      "IGF 1 (UKB data field 30770)",
+      "IGF-like family receptor 1 levels (IGFLR1.7244.16.3)", 
+      "Insulin growth factor-like family member 3 levels (IGFL3.6961.14.3)",  
+      "Insulin growth factor-like family member 4 levels (IGFL4.6353.60.3)",  
+      "Insulin-like growth factor 1 receptor levels (IGF1R.4232.19.2)", 
+      "Insulin-like growth factor I levels (IGF1.2952.75.2)", 
+      "Insulin-like growth factor-binding protein 3 levels (IGFBP3.2571.12.3)",  
+      "Insulin-like growth factor-binding protein 7 levels (IGFBP7.3320.49.2)",
+      "IGF-like family receptor 1 levels",
+      "IGF-II receptor level (CSF)", 
+      "IGFBP-1 level (brain)",
+      "IGFBP-7 level (brain)",  
+      "IGFBP 3 plasma levels",  
+      "IGF-II receptor level (plasma)",  
+      "Serum levels of protein IGF1",   
+      "Serum levels of protein IGFBP3",  
+      "IGF-1 and IGFBP-3 levels (bivariate analysis)",  
+      "Serum levels of protein IGFLR1", 
+      "Serum levels of protein IGF1R",  
+      "Serum levels of protein IGF2R", 
+      "Serum levels of protein IGFALS",
+      "Serum levels of protein IGFBP1",  
+      "Serum levels of protein IGFBP5",  
+      "Serum levels of protein IGFBP6",   
+      "Serum levels of protein IGFBP7",  
+      "Serum levels of protein IGFBPL1",  
+      "Serum levels of protein IGFL1",
+      "Serum levels of protein IGFL3",  
+      "Serum levels of protein IGFL4",
+      "Fibroblast growth factor 5 levels",
+      "Fibroblast growth factor-binding protein 1 levels",
+      "Fibroblast growth factor-binding protein 2 levels",
+      "Fibroblast growth factor receptor 4 levels", 
+      "Fibroblast growth factor receptor 2 levels",
+      "Fibroblast growth factor 16 levels", 
+      "Fibroblast growth factor 19 levels",  
+      "Fibroblast growth factor-binding protein 3 levels", 
+      "Fibroblast growth factor 21 levels",  
+      "Fibroblast growth factor 23 levels",  
+      "Fibroblast growth factor 2 levels",  
+      "Fibroblast growth factor 16 levels (FGF16.13725.3.3)",
+      "Fibroblast growth factor 19 levels (FGF19.2762.30.2)",  
+      "Fibroblast growth factor 7 levels (FGF7.14031.18.3)", 
+      "Fibroblast growth factor 8 isoform A levels (FGF8.4394.71.2)",
+      "Circulating fibroblast growth factor 21 levels", 
+      "Circulating fibroblast growth factor 23 levels",  
+      "Fibroblast growth factor receptor-like 1 levels", 
+      "Acidic fibroblast growth factor intracellular-binding protein levels",
+      "Fibroblast growth factor 10 levels", 
+      "Fibroblast growth factor 12 levels",  
+      "Fibroblast growth factor 17 levels", 
+      "Fibroblast growth factor 18 levels", 
+      "Fibroblast growth factor 20 levels",  
+      "Fibroblast growth factor 22 levels", 
+      "Fibroblast growth factor 3 levels",  
+      "Fibroblast growth factor 4 levels",
+      "Fibroblast growth factor 6 levels",
+      "Fibroblast growth factor 7 levels",  
+      "Fibroblast growth factor 8 levels", 
+      "Fibroblast growth factor 8 isoform B levels", 
+      "Fibroblast growth factor 8 isoform F levels", 
+      "Fibroblast growth factor 9 levels",  
+      "Fibroblast growth factor receptor 1 levels",
+      "Fibroblast growth factor receptor 3 levels",  
+      "Fibroblast growth factor receptor substrate 2 levels",
+      "Fibroblast growth factor basic levels",  
+      "Fibroblast growth factor 19 (analyte X2762.30) levels",
+      "Fibroblast growth factor 7 (analyte X4487.1) levels",  
+      "Fibroblast growth factor 7 (analyte X14031.18) levels",  
+      "Fibroblast growth factor 19 (analyte X13724.27) levels", 
+      "Fibroblast growth factor receptor-like 1 (analyte X6237.11) levels",  
+      "Fibroblast growth factor 8 isoform A levels",  
+      "FGFR1 oncogene partner levels",  
+      "Fibroblast growth factor 16 levels (FGF16.13725.3.3)",  
+      "Fibroblast growth factor 19 levels (FGF19.2762.30.2)",  
+      "Fibroblast growth factor 7 levels (FGF7.14031.18.3)", 
+      "Fibroblast growth factor 8 isoform A levels (FGF8.4394.71.2)", 
+      "FGF7 level (CSF)", 
+      "FGF-19 level (plasma)",  
+      "FGF-19 level (CSF)",  
+      "Serum levels of protein FGF10",  
+      "Serum levels of protein FGF19", 
+      "Serum levels of protein FGF7",
+      "Serum levels of protein FGFBP1",
+      "Serum levels of protein FGFBP3", 
+      "Serum levels of protein FGFR3",
+      "Serum levels of protein FGFRL1",  
+      "FGF5 protein levels",  
+      "IGF 1 (UKB data field 30770)",
+      "IGF-like family receptor 1 levels (IGFLR1.7244.16.3)",  
+      "Insulin growth factor-like family member 3 levels (IGFL3.6961.14.3)", 
+      "Insulin growth factor-like family member 4 levels (IGFL4.6353.60.3)",  
+      "Insulin-like growth factor 1 receptor levels (IGF1R.4232.19.2)",  
+      "Insulin-like growth factor I levels (IGF1.2952.75.2)",
+      "Insulin-like growth factor-binding protein 3 levels (IGFBP3.2571.12.3)",  
+      "Insulin-like growth factor-binding protein 7 levels (IGFBP7.3320.49.2)", 
+      "IGF-like family receptor 1 levels",
+      "IGF-II receptor level (CSF)",
+      "IGFBP-1 level (brain)",
+      "IGFBP-7 level (brain)",  
+      "IGFBP 3 plasma levels",  
+      "IGF-II receptor level (plasma)",
+      "Serum levels of protein IGF1",   
+      "Serum levels of protein IGFBP3",   
+      "IGF-1 and IGFBP-3 levels (bivariate analysis)", 
+      "Serum levels of protein IGFLR1",   
+      "Serum levels of protein IGF1R",
+      "Serum levels of protein IGF2R",    
+      "Serum levels of protein IGFALS",   
+      "Serum levels of protein IGFBP1",  
+      "Serum levels of protein IGFBP5",   
+      "Serum levels of protein IGFBP6",   
+      "Serum levels of protein IGFBP7",   
+      "Serum levels of protein IGFBPL1", 
+      "Serum levels of protein IGFL1","Serum levels of protein IGFL3",  
+      "Serum levels of protein IGFL4") ~ "Growth factors",
+  
+  # > CRP - C-reactive protein
+    `DISEASE/TRAIT` %in% c(
+      "C-reactive protein", 
+      "C-reactive protein (CRP, dL, maximum, inv-norm transformed)", 
+      "C-reactive protein (CRP, dL, mean, inv-norm transformed)",  
+      "C-reactive protein (CRP, dL, minimum, inv-norm transformed)",
+      "C-reactive protein (CRP, L, minimum, inv-norm transformed)", 
+      "C-reactive protein (red blood cell fatty acid level interaction)",   
+      "C-reactive protein and white blood cell count",
+      "C-reactive protein levels","C-reactive protein levels (CRP.4337.49.2)",
+      "C-reactive protein levels (MTAG)", 
+      "C-reactive protein levels or HDL-cholesterol levels (pleiotropy)", 
+      "C-reactive protein levels or LDL-cholesterol levels (pleiotropy)", 
+      "C-reactive protein levels or total cholesterol levels (pleiotropy)", 
+      "C-reactive protein levels or triglyceride levels (pleiotropy)",  
+      "High-sensitivity C-reactive protein levels", 
+      "Serum C-reactive protein concentration",
+      "Serum C-reactive protein concentration in high fat diet") ~ "CRP",
+ 
+   # > Neutrophil
+    `DISEASE/TRAIT` %in% c(
+      "Neutrophil count", "Sum neutrophil eosinophil counts","Sum basophil neutrophil counts", 
+      "Neutrophil percentage of granulocytes","Neutrophil percentage of white cells", "Neutrophil granulocyte count", 
+      "Plasma neutrophil extracellular trap levels","Absolute neutrophil count") ~ "Neutrophil",
+
+  # > Basophil
+    `DISEASE/TRAIT` %in% c(
+      "White blood cell count (basophil)", 
+      "Sum basophil neutrophil counts", 
+      "Basophil count", 
+      "Basophil percentage of white cell",
+      "Sum eosinophil basophil counts", 
+      "Basophil percentage of granulocytes",
+      "CD33 on basophil",  
+      "Basophil Absolute Count",
+      "Basophil %CD33dim HLA DR- CD66b-", 
+      "CD11b on basophil") ~ "Basophil",
+
+  # > Monocyte
+    `DISEASE/TRAIT` %in% c(
+      "Monocyte chemoattractant protein-1 levels",  
+      "Monocyte count", 
+      "Monocyte early outgrowth colony forming units",
+      "Monocyte-lymphocyte ratio",
+      "Monocyte percentage of white cells",    
+      "Monocyte percentage (UKB data field 30190)",  
+      "Monocyte count (UKB data field 30130)",   
+      "Lymphocyte-to-monocyte ratio", 
+      "Endothelial monocyte-activating polypeptide 2 levels (AIMP1.2714.78.2)",
+      "Monocyte chemoattractant protein-4 levels",  
+      "Endothelial monocyte-activating polypeptide 2 levels",
+      "Monocyte differentiation antigen CD14, soluble levels",  
+      "White blood cell count (monocyte)",
+      "Monocyte chemoattractant protein-1 (red blood cell fatty acid level interaction)",   
+      "Monocyte differentiation antigen CD14 levels",  
+      "Monocyte chemoattractant protein-3 levels",  
+      "CD4 on monocyte",
+      "CD33 on CD14+ monocyte",  
+      "CD45 on CD14+ monocyte",  
+      "HLA DR++ monocyte %monocyte",  
+      "HLA DR++ monocyte %leukocyte",  
+      "HLA DR++ monocyte Absolute Count",  
+      "CD16 on CD14- CD16+ monocyte",  
+      "CD62L- monocyte Absolute Count",   
+      "CD62L- monocyte %monocyte",   
+      "CD11c+ CD62L- monocyte Absolute Count",  
+      "CD11c+ HLA DR++ monocyte Absolute Count",
+      "CCR2 on monocyte",  
+      "CD39 on monocyte",
+      "CD80 on monocyte",  
+      "CD14- CD16+ monocyte Absolute Count",  
+      "CD14+ CD16+ monocyte Absolute Count",  
+      "CD14+ CD16- monocyte Absolute Count",
+      "Monocyte Absolute Count",
+      "CD62L on monocyte","CD11c on monocyte",
+      "CD11b on CD14+ monocyte", 
+      "CD86 on monocyte",  
+      "CD40 on CD14+ CD16- monocyte",  
+      "CD40 on CD14+ CD16+ monocyte",  
+      "CCR2 on CD14- CD16+ monocyte",  
+      "CD14 on CD14+ CD16+ monocyte", 
+      "HLA DR on CD14- CD16+ monocyte",  
+      "CD40 on monocytes", 
+      "CD14 on CD14+ CD16- monocyte",  
+      "CD64 on CD14+ CD16- monocyte",  
+      "HLA DR on CD14+ CD16- monocyte",
+      "CD40 on CD14- CD16+ monocyte",  
+      "CD64 on CD14- CD16+ monocyte",  
+      "HLA DR on CD14+ monocyte", 
+      "CCR2 on CD14+ CD16+ monocyte",  
+      "PDL-1 on CD14+ CD16- monocyte",
+      "CX3CR1 on monocyte",  
+      "HLA DR on monocyte", 
+      "CD64 on CD14+ CD16+ monocyte",
+      "CX3CR1 on CD14- CD16+ monocyte",  
+      "CX3CR1 on CD14+ CD16+ monocyte",
+      "CX3CR1 on CD14+ CD16- monocyte",  
+      "PDL-1 on CD14+ CD16+ monocyte",  
+      "PDL-1 on CD14- CD16+ monocyte",
+      "PDL-1 on monocyte", 
+      "CCR2 on CD14+ CD16- monocyte",  
+      "CD16 on CD14+ CD16+ monocyte",
+      "CD64 on monocyte",  
+      "HLA DR on CD14+ CD16+ monocyte") ~ "Monocyte",
+
+  # > Eosinophil
+    `DISEASE/TRAIT` %in% c(
+      "Eosinophil counts", 
+      "Sum neutrophil eosinophil counts",  
+      "Eosinophil percentage of granulocytes",
+      "Eosinophil percentage of white cells",
+      "Eosinophil cationic protein levels",   
+      "Eosinophill percentage (UKB data field 30210)",  
+      "Eosinophill count (UKB data field 30150)", 
+      "White blood cell count (eosinophil)",  
+      "Sum eosinophil basophil counts",  
+      "Eosinophil cationic protein (analyte X15576.158) levels",
+      "Eosinophil cationic protein (analyte X5741.55) levels",
+      "Eosinophil-derived neurotoxin levels",    
+      "Eosinophil cationic protein levels and Eosinophil-derived neurotoxin levels", 
+      "Eosinophilia (PheCode 288.3)") ~"Eosinophil",
+   
+  # > Mast cells
+    `DISEASE/TRAIT` %in% c(
+      "Mast cell-expressed membrane protein 1 levels", 
+      "Mast cell-expressed membrane protein 1 levels (MCEMP1.6283.60.3)") ~ "Mast cells",
+  
+  # > Macrophage
+    `DISEASE/TRAIT` %in% c(
+    "Macrophage receptor MARCO levels",
+    "Macrophage Migration Inhibitory Factor levels",
+    "Macrophage scavenger receptor types I and II levels",
+    "Macrophage mannose receptor 1 levels",  
+    "Macrophage metalloelastase levels",
+    "Macrophage-capping protein levels",  
+    "Granulocyte-macrophage colony-stimulating factor receptor subunit alpha levels",  
+    "Granulocyte-macrophage colony-stimulating factor levels",
+    "Macrophage colony-stimulating factor 1 levels",
+    "Macrophage colony-stimulating factor 1 receptor levels",
+    "Macrophage mannose receptor 1 levels (MRC1.2637.77.2)",
+    "Macrophage metalloelastase levels (MMP12.4496.60.2)",
+    "Macrophage migration inhibitory factor levels (MIF.5356.2.3)",
+    "Macrophage inflammatory protein 1a levels",
+    "Macrophage-stimulating protein receptor levels",
+    "Macrophage inflammatory protein 1b levels",
+    "Macrophage colony stimulating factor levels",
+    "Macrophage colony-stimulating factor 1 receptor (analyte X2638.12) levels",
+    "Macrophage receptor MARCO (analyte X20134.27) levels",
+    "Macrophage scavenger receptor types I and II:Extracellular domain (analyte X15533.97) levels",
+    "Macrophage scavenger receptor types I and II:Extracellular domain (analyte X11282.16) levels",
+    "Macrophage erythroblast attacher levels",
+    "Macrophage migration inhibitory factor (analyte X5356.2) levels") ~ "Macrophage",
+
+  # > IL-1
+    `DISEASE/TRAIT` %in% c(
+    "Toll/interleukin-1 receptor domain-containing adapter protein levels",
+    "Toll/interleukin-1 receptor domain-containing adapter protein levels (TIRAP.9839.148.3)",
+    "Interleukin-1 alpha levels",  
+    "Interleukin-1 beta levels",  
+    "Interleukin-1 beta levels (IL1B.3037.62.1)",
+    "Interleukin-1 Receptor accessory protein (analyte X14048.7) levels",
+    "Interleukin-1 Receptor accessory protein (analyte X2630.12) levels",
+    "Interleukin-1 Receptor accessory protein levels",
+    "Interleukin-1 Receptor accessory protein levels (IL1RAP.2630.12.2)",
+    "Interleukin-1 receptor antagonist protein levels",
+    "Interleukin-1 receptor antagonist protein levels (IL1RN.5353.89.2)",
+    "Interleukin-1 receptor type 1 levels",  
+    "Interleukin-1 receptor type 2 (analyte X14133.93) levels",
+    "Interleukin-1 receptor type 2 levels",  
+    "Interleukin-1 receptor type 2 levels (IL1R2.14133.93.3)",
+    "Interleukin-1 receptor-associated kinase 1 levels",
+    "Interleukin-1 receptor-associated kinase 4 levels",
+    "Interleukin-1 receptor-like 1 levels", 
+    "Interleukin-1 receptor-like 1 levels (IL1RL1.4234.8.2)",
+    "Interleukin-1 receptor-like 2 levels", 
+    "Interleukin-1 receptor-like 2 levels (IL1RL2.2994.71.2)",
+    "Interleukin-1-beta levels", 
+    "Interleukin-1-receptor antagonist levels") ~ "IL-1",
+  
+  # > IL-6
+`DISEASE/TRAIT` %in% c(
+    "Interleukin-6 (analyte X2573.20) levels",
+    "Interleukin-6 (analyte X4673.13) levels",
+    "Interleukin-6 (red blood cell fatty acid level interaction)",
+    "Interleukin-6 levels",
+    "Interleukin-6 levels (IL6:P05231:OID20101:v1)",
+    "Interleukin-6 levels (IL6:P05231:OID20563:v1)",
+    "Interleukin-6 levels (IL6:P05231:OID20911:v1)",
+    "Interleukin-6 levels (IL6:P05231:OID21276:v1)",
+    "Interleukin-6 levels in overweight individuals",
+    "Interleukin-6 receptor subunit alpha (analyte X15602.43) levels",
+    "Interleukin-6 receptor subunit alpha (analyte X4139.71) levels",
+    "Interleukin-6 receptor subunit alpha (analyte X8092.29) levels",
+    "Interleukin-6 receptor subunit alpha levels",
+    "Interleukin-6 receptor subunit alpha levels (IL6R.4139.71.2)",
+    "Interleukin-6 receptor subunit beta levels",
+    "Interleukin-6 receptor subunit beta levels (IL6ST.2620.4.2)",
+    "Serum interleukin-6 concentration") ~ "IL-6",
+
+  # > IL-12
+`DISEASE/TRAIT` %in% c(
+    "Interleukin-12 levels",
+    "Interleukin-12 receptor subunit beta-1 levels",
+    "Interleukin-12 receptor subunit beta-1 levels (IL12RB1.2632.5.2)",
+    "Interleukin-12 receptor subunit beta-2 levels",
+    "Interleukin-12 receptor subunit beta-2 levels (IL12RB2.3815.14.1)",
+    "Interleukin-12 subunit B levels",
+    "Interleukin-12 subunit beta levels",
+    "Interleukin-12p70 levels" ) ~ "IL-12",
+
+  # > IL-18
+`DISEASE/TRAIT` %in% c(
+    "Interleukin-18 levels",
+    "Interleukin-18 receptor 1 (analyte X14079.14) levels",
+    "Interleukin-18 receptor 1 (analyte X3446.7) levels",
+    "interleukin-18 receptor 1 levels",
+    "Interleukin-18 receptor 1 levels (IL18R1.3446.7.2)",
+    "Interleukin-18 receptor accessory protein (analyte X10457.3) levels",
+    "Interleukin-18 receptor accessory protein levels",
+    "Interleukin-18-binding protein levels") ~ "IL-18",
+
+  # > IFN
+`DISEASE/TRAIT` %in% c(
+    "Interferon alpha-14 levels",
+    "Interferon alpha-16 levels",
+    "Interferon alpha-2 levels",
+    "Interferon alpha-4 levels",
+    "Interferon alpha-5 levels",
+    "Interferon alpha-7 levels",
+    "Interferon alpha/beta receptor 1 (analyte X9183.7) levels",
+    "Interferon alpha/beta receptor 1 levels",
+    "Interferon alpha/beta receptor 1 levels (IFNAR1.9183.7.3)",
+    "Interferon gamma levels",
+    "Interferon gamma receptor 1 levels",
+    "Interferon gamma receptor 1 levels (IFNGR1.5825.49.3)",
+    "Interferon gamma receptor 2 levels",
+    "Interferon gamma-induced protein 10 levels",
+    "Serum levels of protein IFNA10",
+    "Serum levels of protein IFNA2",
+    "Serum levels of protein IFNA7",
+    "Serum levels of protein IFNAR1",
+    "Serum levels of protein IFNGR1",
+    "Serum levels of protein IFNLR1",
+    "IFN-a/b R1 level (CSF)",
+    "IFN-g level (CSF)") ~ "IFN",
+
+# > TNF
+`DISEASE/TRAIT` %in% c(
+    "Serum levels of protein C1QTNF1", 
+    "Serum levels of protein C1QTNF5",
+    "Serum levels of protein C1QTNF9", 
+    "Serum levels of protein TNF",
+    "Serum levels of protein TNFAIP6", 
+    "Serum levels of protein TNFAIP8",
+    "Serum levels of protein TNFRSF10A", 
+    "Serum levels of protein TNFRSF10B",
+    "Serum levels of protein TNFRSF11A", 
+    "Serum levels of protein TNFRSF11B",
+    "Serum levels of protein TNFRSF12A", 
+    "Serum levels of protein TNFRSF13B",
+    "Serum levels of protein TNFRSF14", 
+    "Serum levels of protein TNFRSF18",
+    "Serum levels of protein TNFRSF19", 
+    "Serum levels of protein TNFRSF1A",
+    "Serum levels of protein TNFRSF1B", 
+    "Serum levels of protein TNFRSF8",
+    "Serum levels of protein TNFSF11", 
+    "Serum levels of protein TNFSF12",
+    "Serum levels of protein TNFSF14", 
+    "Serum levels of protein TNFSF18", "TNF levels", 
+    "TNF receptor-associated factor 1 levels",
+    "TNF receptor-associated factor 2 levels", 
+    "TNF receptor-associated factor 3 Isoform 2 levels", 
+    "TNF receptor-associated factor 4 levels",
+    "TNF sR-II level (brain)","TNF-beta levels", 
+    "TNF-related activation-induced cytokine levels", 
+    "TNF-related apoptosis-inducing ligand levels", 
+    "TNF-related apoptosis-inducing ligand receptor 2 levels", 
+    "TNFAIP3-interacting protein 1 levels",
+    "TNFRSF10A protein levels", 
+    "TNFRSF10B protein levels", 
+    "TNFRSF10C protein levels", 
+    "TNFRSF11A protein levels", 
+    "TNFRSF11B protein levels", 
+    "TNFRSF14 protein levels", 
+    "TNFRSF6B protein levels", 
+    "TNFRSF9 levels", 
+    "TNFSF10 protein levels", 
+    "TNFSF14 protein levels", 
+    "TNFSF15 level (CSF)", 
+    "Tumor necrosis factor levels (TNF:P01375:OID20074:v1)", 
+    "Tumor necrosis factor levels (TNF:P01375:OID20473:v1)", 
+    "Tumor necrosis factor levels (TNF:P01375:OID20848:v1)", 
+    "Tumor necrosis factor levels (TNF:P01375:OID21237:v1)", 
+    "Tumor necrosis factor ligand superfamily member 12 levels (TNFSF12.5939.42.3)",
+    "Tumor necrosis factor ligand superfamily member 14 levels (TNFSF14.5355.69.3)", 
+    "Tumor necrosis factor ligand superfamily member 8 levels (TNFSF8.3421.54.2)", 
+    "Tumor necrosis factor receptor superfamily member 11A levels (TNFRSF11A.8316.36.3)", 
+    "Tumor necrosis factor receptor superfamily member 11B levels (TNFRSF11B.2526.53.3)", 
+    "Tumor necrosis factor receptor superfamily member 1B levels (TNFRSF1B.8368.102.3)", 
+    "Tumor necrosis factor receptor superfamily member 6B levels (TNFRSF6B.5070.76.3)", 
+    "Tumor necrosis factor-inducible gene 6 protein levels (TNFAIP6.5036.50.1)",
+    "Complement C1q and tumor necrosis factor-related protein 9A levels", 
+    "Complement C1q and tumor necrosis factor-related protein 9A levels (C1QTNF9.6019.12.3)", 
+    "Complement C1q tumor necrosis factor-related protein 1 levels",
+    "Complement C1q tumor necrosis factor-related protein 1 levels (C1QTNF1.6304.8.3)", 
+    "Complement C1q tumor necrosis factor-related protein 3 levels",
+    "Complement C1q tumor necrosis factor-related protein 4 (analyte X21567.214) levels", 
+    "Complement C1q tumor necrosis factor-related protein 5 levels",
+    "Complement C1q tumor necrosis factor-related protein 5 levels (C1QTNF5.7810.20.3)",
+    "Complement C1q tumor necrosis factor-related protein 6 levels",
+    "Tumor necrosis factor alpha levels",
+    "Tumor necrosis factor alpha-induced protein 2 levels",
+    "Tumor necrosis factor alpha-induced protein 3 levels",
+    "Tumor necrosis factor alpha-induced protein 8 levels",
+    "Tumor necrosis factor alpha-induced protein 8-like protein 2 levels",
+    "Tumor necrosis factor beta levels","Tumor necrosis factor levels",
+    "Tumor necrosis factor levels (TNF:P01375:OID20074:v1)", 
+    "Tumor necrosis factor levels (TNF:P01375:OID20473:v1)", 
+    "Tumor necrosis factor levels (TNF:P01375:OID20848:v1)", 
+    "Tumor necrosis factor levels (TNF:P01375:OID21237:v1)",
+    "Tumor necrosis factor ligand superfamily member 10 levels",
+    "Tumor necrosis factor ligand superfamily member 11 levels",
+    "Tumor necrosis factor ligand superfamily member 12 levels",
+    "Tumor necrosis factor ligand superfamily member 12 levels (TNFSF12.5939.42.3)", 
+    "Tumor necrosis factor ligand superfamily member 13 levels",
+    "Tumor necrosis factor ligand superfamily member 13B levels",
+    "Tumor necrosis factor ligand superfamily member 14 (analyte X5355.69) levels", 
+    "Tumor necrosis factor ligand superfamily member 14 levels",
+    "Tumor necrosis factor ligand superfamily member 14 levels (TNFSF14.5355.69.3)", 
+    "Tumor necrosis factor ligand superfamily member 15 (analyte X2968.61) levels",
+    "Tumor necrosis factor ligand superfamily member 15 levels", 
+    "Tumor necrosis factor ligand superfamily member 18 levels",
+    "Tumor necrosis factor ligand superfamily member 6 levels", 
+    "Tumor necrosis factor ligand superfamily member 6, soluble form levels", 
+    "Tumor necrosis factor ligand superfamily member 6, soluble form levels (FASLG.3052.8.2)", 
+    "Tumor necrosis factor ligand superfamily member 8 levels", 
+    "Tumor necrosis factor ligand superfamily member 8 levels (TNFSF8.3421.54.2)", 
+    "Tumor necrosis factor receptor 1 levels", 
+    "Tumor necrosis factor receptor 2 levels", 
+    "Tumor necrosis factor receptor II (red blood cell fatty acid level interaction)", 
+    "Tumor necrosis factor receptor superfamily member 10A levels", 
+    "Tumor necrosis factor receptor superfamily member 10B levels", 
+    "Tumor necrosis factor receptor superfamily member 10C levels", 
+    "Tumor necrosis factor receptor superfamily member 10D levels",
+    "Tumor necrosis factor receptor superfamily member 11A levels", 
+    "Tumor necrosis factor receptor superfamily member 11A levels (TNFRSF11A.8316.36.3)", 
+    "Tumor necrosis factor receptor superfamily member 11B levels", 
+    "Tumor necrosis factor receptor superfamily member 11B levels (TNFRSF11B.2526.53.3)", 
+    "Tumor necrosis factor receptor superfamily member 12A levels", 
+    "Tumor necrosis factor receptor superfamily member 13B levels", 
+    "Tumor necrosis factor receptor superfamily member 13C levels", 
+    "Tumor necrosis factor receptor superfamily member 14 (analyte X10472.53) levels", 
+    "Tumor necrosis factor receptor superfamily member 14 (analyte X5352.11) levels", 
+    "Tumor necrosis factor receptor superfamily member 14 levels", 
+    "Tumor necrosis factor receptor superfamily member 16 levels (NGFR.8949.3.3)",
+    "Tumor necrosis factor receptor superfamily member 17 levels", 
+    "Tumor necrosis factor receptor superfamily member 18 (analyte X11837.7) levels",
+    "Tumor necrosis factor receptor superfamily member 18 levels", 
+    "Tumor necrosis factor receptor superfamily member 19 levels", 
+    "Tumor necrosis factor receptor superfamily member 19L levels",
+    "Tumor necrosis factor receptor superfamily member 19L levels (RELT.5115.31.3)", 
+    "Tumor necrosis factor receptor superfamily member 1A levels", 
+    "Tumor necrosis factor receptor superfamily member 1B (analyte X3152.57) levels",
+    "Tumor necrosis factor receptor superfamily member 1B (analyte X8368.102) levels", 
+    "Tumor necrosis factor receptor superfamily member 1B levels", 
+    "Tumor necrosis factor receptor superfamily member 1B levels (TNFRSF1B.8368.102.3)", 
+    "Tumor necrosis factor receptor superfamily member 21 (analyte X5404.53) levels",
+    "Tumor necrosis factor receptor superfamily member 21 (analyte X9259.35) level", 
+    "Tumor necrosis factor receptor superfamily member 21 levels", 
+    "Tumor necrosis factor receptor superfamily member 27 levels", 
+    "Tumor necrosis factor receptor superfamily member 3 levels", 
+    "Tumor necrosis factor receptor superfamily member 3 levels (LTBR.2636.10.2)", 
+    "Tumor necrosis factor receptor superfamily member 4 levels", 
+    "Tumor necrosis factor receptor superfamily member 5 levels", 
+    "Tumor necrosis factor receptor superfamily member 6 (analyte X5392.73) levels", 
+    "Tumor necrosis factor receptor superfamily member 6 (analyte X6248.68) levels", 
+    "Tumor necrosis factor receptor superfamily member 6 (analyte X9218.7) levels", 
+    "Tumor necrosis factor receptor superfamily member 6 (analyte X9459.7) levels", 
+    "Tumor necrosis factor receptor superfamily member 6 levels",
+    "Tumor necrosis factor receptor superfamily member 6 levels (FAS.9459.7.3)",
+    "Tumor necrosis factor receptor superfamily member 6B levels", 
+    "Tumor necrosis factor receptor superfamily member 6B levels (TNFRSF6B.5070.76.3)", 
+    "Tumor necrosis factor receptor superfamily member 8 levels", 
+    "Tumor necrosis factor receptor superfamily member 9 levels", 
+    "Tumor necrosis factor receptor superfamily member EDAR levels", 
+    "Tumor necrosis factor receptor superfamily member EDAR levels (EDAR.2977.7.2)", 
+    "Tumor necrosis factor receptor type 1-associated DEATH domain protein levels", 
+    "Tumor necrosis factor-inducible gene 6 protein levels", 
+    "Tumor necrosis factor-inducible gene 6 protein levels (TNFAIP6.5036.50.1)"
+    ) ~ "TNF",
+
+  # > Complement
+`DISEASE/TRAIT` %in% c(
+    "Complement factor H binding to malondialdehyde",
+    "Complement C1q tumor necrosis factor-related protein 5 levels",
+    "Complement C1q and tumor necrosis factor-related protein 9A levels",
+    "Complement C1r subcomponent levels",
+    "Complement C1r subcomponent-like protein levels",
+    "Complement C1q tumor necrosis factor-related protein 6 levels",
+    "Complement C1s subcomponent levels",
+    "Complement C2 levels",
+    "Complement C3 levels",
+    "Complement C5 levels",
+    "Complement component C7 levels",
+    "Complement component C8 beta chain levels",
+    "Complement C1q-like protein 2 levels",
+    "Complement C1q tumor necrosis factor-related protein 1 levels",
+    "Complement C1q subcomponent subunit A levels",
+    "Complement component C9 levels",
+    "Complement decay-accelerating factor levels",
+    "Complement factor I levels",
+    "Complement receptor type 1 levels",
+    "Complement receptor type 2 levels",
+    "Complement factor H-related protein 2 levels",
+    "Complement factor H-related protein 4 levels",
+    "Complement factor H-related protein 5 levels",
+    "Complement factor D levels",
+    "Complement factor H levels",
+    "Complement C1q and tumor necrosis factor-related protein 9A levels (C1QTNF9.6019.12.3)",
+    "Complement C1q subcomponent subunit C levels (C1QC.14100.63.3)",
+    "Complement C1q tumor necrosis factor-related protein 1 levels (C1QTNF1.6304.8.3)",
+    "Complement C1q tumor necrosis factor-related protein 5 levels (C1QTNF5.7810.20.3)",
+    "Complement C1r subcomponent-like protein levels (C1RL.9348.1.3)",
+    "Complement C4 levels (C4A.C4B.4481.34.2)",
+    "Complement factor H-related protein 5 levels (CFHR5.3666.17.4)",
+    "Complement factor I levels (CFI.2567.5.6)",
+    "Complement component 1 Q subcomponent-binding protein, mitochondrial levels (C1QBP.4967.1.1)",
+    "Complement component C8 levels (C8A.C8B.C8G.2429.27.4)",
+    "Complement component C9 levels (C9.3060.43.2)",
+    "Complement decay-accelerating factor levels (CD55.5069.9.3)",
+    "Complement factor B levels (CFB.4129.72.1)",
+    "Complement factor H levels (CFH.4159.130.1)",
+    "Complement C5b-C6 complex levels",
+    "Complement component C6 levels",
+    "Complement component C8 gamma chain levels",
+    "Complement factor B levels",
+    "Complement factor H-related protein 1 levels",
+    "Complement C3 and C4 levels",
+    "complement factor H-related 5 level (CSF)",
+    "complement factor H-related 5 level (plasma)",
+    "Complement C1q tumor necrosis factor-related protein 3 levels",
+    "Complement component 1 Q subcomponent-binding protein, mitochondrial levels",
+    "Complement C1q subcomponent subunit C levels",
+    "Complement component C1q receptor levels",
+    "Complement C3b levels",
+    "Complement C3b, inactivated levels",
+    "Complement C3d fragment levels",
+    "Complement C4 levels",
+    "Complement C4b levels",
+    "Complement C1q subcomponent levels",
+    "Complement component C8 levels",
+    "Complement component C7 (analyte X2888.49) levels",
+    "Complement factor D (analyte X2946.52) levels",
+    "Complement C1s subcomponent (analyte X8840.61) levels",
+    "Complement component C9 (analyte X3060.43) levels",
+    "Complement factor H-related protein 5 (analyte X7885.17) levels",
+    "Complement factor H-related protein 5 (analyte X3666.17) levels",
+    "Complement factor H-related protein 3 levels",
+    "Complement factor H-related protein 4A levels",
+    "Serum C3d:C3 ratio (systemic complement activation)",
+    "Complement C1s subcomponent (analyte X20203.45) levels",
+    "Complement component C1q receptor (analyte X14136.234) levels",
+    "Complement factor H-related protein 5 (analyte X16055.3) levels",
+    "Complement component C7 (analyte X13731.14) levels",
+    "Complement component C9 (analyte X13722.105) levels",
+    "Complement factor D (analyte X13678.169) levels",
+    "Complement C1q tumor necrosis factor-related protein 4 (analyte X21567.214) levels",
+    "Complement C1q-like protein 3 levels",
+    "Complement factor H-related protein 1 (analyte X5982.50) levels",
+    "Complement factor H-like 1 protein levels",
+    "Complement factor H measurement",
+    "Circulating complement factor I levels") ~ "Complement",
+
+  # > HLA
+`DISEASE/TRAIT` %in% c(
+    "CD40 ligand levels",
+    "CD40 levels",
+    "CD40 protein levels",
+    "CD40L receptor levels",
+    "CD40 plasma levels",
+    "Serum levels of protein CD40",
+    "Serum levels of protein CD40LG",
+    "MHC class I polypeptide-related sequence A levels",
+    "MHC class I polypeptide-related sequence B_A levels",
+    "MHC class I polypeptide-related sequence B levels (MICB.5102.55.3)",
+    "HLA class II histocompatibility antigen, DR alpha chain levels",
+    "HLA class I histocompatibility antigen, A alpha chain levels",
+    "HLA class I histocompatibility antigen, alpha chain E levels",
+    "HLA class II histocompatibility antigen, DM alpha chain levels (HLA.DMA.10639.1.3)",
+    "HLA class II histocompatibility antigen, DP beta 1 chain levels (HLA.DPB1.8755.202.3)",
+    "HLA class II histocompatibility antigen, DQ alpha 2 chain levels (HLA.DQA2.7757.5.3)",
+    "HLA class I histocompatibility antigen, alpha chain G levels",
+    "HLA class II histocompatibility antigen gamma chain levels",
+    "PDL-1 on CD14+ CD16- monocyte",
+    "PDL-1 on CD14+ CD16+ monocyte",
+    "PDL-1 on CD14- CD16+ monocyte",
+    "PDL-1 on CD14- CD16-",
+    "HLA DR++ monocyte %monocyte",
+    "HLA DR++ monocyte %leukocyte",
+    "HLA DR++ monocyte Absolute Count",
+    "CD33 on CD33+ HLA DR+ CD14-",
+    "CD33 on CD33dim HLA DR+ CD11b+",
+    "CD33 on CD33dim HLA DR+ CD11b-",
+    "HLA DR on CD14- CD16+ monocyte",
+    "HLA DR on CD14+ CD16- monocyte",
+    "Serum levels of protein HHLA2",
+    "Serum levels of protein HLA-DRB3",
+    "CD80 on granulocyte",
+    "CD86 on granulocyte",
+    "HLA class II histocompatibility antigen, DQ alpha 2 chain levels",
+    "HLA class II histocompatibility antigen, DR beta 3 chain levels", 
+    "Hypersomnia (HLA-DQB1*06:02 negative)",
+    "MHC class I polypeptide-related sequence B levels",
+    "ICOS ligand levels (ICOSLG.9303.9.3)",
+    "Serum levels of protein ICOSLG",
+    "ICOSLG protein levels") ~ "HLA",
+
+  # > DCs
+`DISEASE/TRAIT` %in% c(
+    "Follicular dendritic cell secreted peptide levels",
+    "CD123 on plasmacytoid Dendritic Cell",
+    "CD123 on CD62L+ plasmacytoid Dendritic Cell",
+    "Plasmacytoid Dendritic Cell %Dendritic Cell",
+    "Myeloid Dendritic Cell Absolute Count",
+    "Myeloid Dendritic Cell %Dendritic Cell",
+    "Plasmacytoid Dendritic Cell Absolute Count",
+    "Dendritic Cell Absolute Count",
+    "CD62L- Dendritic Cell Absolute Count",
+    "CD62L- Dendritic Cell %Dendritic Cell",
+    "CD86+ myeloid Dendritic Cell Absolute Count",
+    "CD86+ myeloid Dendritic Cell %Dendritic Cell",
+    "CD86+ plasmacytoid Dendritic Cell %Dendritic Cell",
+    "CD62L- myeloid Dendritic Cell Absolute Count",
+    "CD62L- myeloid Dendritic Cell %Dendritic Cell",
+    "CD62L- plasmacytoid Dendritic Cell Absolute Count",
+    "CD62L- plasmacytoid Dendritic Cell %Dendritic Cell",
+    "CD62L- CD86+ myeloid Dendritic Cell Absolute Count",
+    "CD62L- CD86+ myeloid Dendritic Cell %Dendritic Cell",
+    "CD80 on myeloid Dendritic Cell",
+    "CD80 on CD62L+ myeloid Dendritic Cell",
+    "CD80 on plasmacytoid Dendritic Cell",
+    "CD80 on CD62L+ plasmacytoid Dendritic Cell",
+    "CD62L on CD62L+ myeloid Dendritic Cell",
+    "CD62L on CD62L+ plasmacytoid Dendritic Cell",
+    "CD62L on CD62L+ Dendritic Cell",
+    "HLA DR on myeloid Dendritic Cell",
+    "HLA DR on plasmacytoid Dendritic Cell",
+    "HLA DR on Dendritic Cell",
+    "CD11c on myeloid Dendritic Cell",
+    "CD11c on CD62L+ myeloid Dendritic Cell",
+    "CCR2 on myeloid Dendritic Cell",
+    "CCR2 on CD62L+ myeloid Dendritic Cell",
+    "CCR2 on plasmacytoid Dendritic Cell",
+    "CCR2 on CD62L+ plasmacytoid Dendritic Cell") ~ "DCs",
+
+  # > T cells
+`DISEASE/TRAIT` %in% c(
+    "Terminally Differentiated CD8+ T cell Absolute Count",
+    "Terminally Differentiated CD8+ T cell %T cell",
+    "Terminally Differentiated CD8+ T cell %CD8+ T cell",
+    "Terminally Differentiated CD4+ T cell Absolute Count",
+    "Terminally Differentiated CD4+ T cell %T cell",
+    "Terminally Differentiated CD4+ T cell %CD4+ T cell",
+    "Terminally Differentiated CD4-CD8- T cell Absolute Count",
+    "Terminally Differentiated CD4-CD8- T cell %T cell",
+    "Terminally Differentiated CD4-CD8- T cell %CD4-CD8- T cell",
+    "TCRgd T cell Absolute Count",
+    "TCRgd T cell %lymphocyte",
+    "T cell lymphocyte profile difference",
+    "T cell Absolute Count",
+    "T cell %lymphocyte",
+    "T cell %leukocyte",
+    "T-lymphocyte activation antigen CD86 levels",
+    "T-lymphocyte activation antigen CD80 levels",
+    "Secreting CD4 regulatory T cell Absolute Count",
+    "Secreting CD4 regulatory T cell %CD4+ T cell",
+    "Secreting CD4 regulatory T cell %CD4 regulatory T cell",
+    "Resting CD4 regulatory T cell Absolute Count",
+    "Resting CD4 regulatory T cell %CD4+ T cell",
+    "Resting CD4 regulatory T cell %CD4 regulatory T cell",
+    "Natural Killer T %T cell",
+    "Naive CD8+ T cell Absolute Count",
+    "Naive CD8+ T cell %T cell",
+    "Naive CD8+ T cell %CD8+ T cell",
+    "Naive CD4+ T cell Absolute Count",
+    "Naive CD4+ T cell %T cell",
+    "Naive CD4+ T cell %CD4+ T cell",
+    "Naive CD4-CD8- T cell %T cell",
+    "HVEM on Terminally Differentiated CD4+ T cell",
+    "HVEM on T cell",
+    "HVEM on naive CD8+ T cell",
+    "HVEM on naive CD4+ T cell",
+    "HVEM on Effector Memory CD8+ T cell",
+    "HVEM on Effector Memory CD4+ T cell",
+    "HVEM on Central Memory CD8+ T cell",
+    "HVEM on Central Memory CD4+ T cell",
+    "HVEM on CD8+ T cell",
+    "HVEM on CD45RA- CD4+ T cell",
+    "HVEM on CD4+ T cell",
+    "HLA DR+ T cell%T cell",
+    "HLA DR+ T cell%lymphocyte",
+    "HLA DR+ T cell Absolute Count",
+    "HLA DR+ CD8+ T cell Absolute Count",
+    "HLA DR+ CD8+ T cell %T cell",
+    "HLA DR+ CD8+ T cell %lymphocyte",
+    "HLA DR+ CD4+ T cell Absolute Count",
+    "HLA DR+ CD4+ T cell %T cell",
+    "HLA DR+ CD4+ T cell %lymphocyte",
+    "HLA DR on HLA DR+ T cell",
+    "HLA DR on HLA DR+ CD4+ T cell",
+    "Effector Memory CD8+ T cell Absolute Count",
+    "Effector Memory CD8+ T cell %T cell",
+    "Effector Memory CD8+ T cell %CD8+ T cell",
+    "Effector Memory CD4+ T cell Absolute Count",
+    "Effector Memory CD4+ T cell %T cell",
+    "Effector Memory CD4+ T cell %CD4+ T cell",
+    "Effector Memory CD4-CD8- T cell Absolute Count",
+    "Effector Memory CD4-CD8- T cell %T cell",
+    "Effector Memory CD4-CD8- T cell %CD4-CD8- T cell",
+    "Central Memory CD4+ T cell Absolute Count",
+    "Central Memory CD4+ T cell %T cell",
+    "Central Memory CD4+ T cell %CD4+ T cell",
+    "CD8dim T cell Absolute Count",
+    "CD8dim T cell %T cell",
+    "CD8dim T cell %leukocyte",
+    "CD8dim Natural Killer T %T cell",
+    "CD8+ T cell Absolute Count",
+    "CD8+ T cell %T cell",
+    "CD8+ T cell %leukocyte",
+    "CD8+ Natural Killer T %T cell",
+    "CD8+ and CD8dim T cell %leukocyte",
+    "CD8 on naive CD8+ T cell",
+    "CD8 on HLA DR+ CD8+ T cell",
+    "CD8 on Effector Memory CD8+ T cell",
+    "CD8 on Central Memory CD8+ T cell",
+    "CD8 on CD8+ T cell",
+    "CD8 on CD39+ CD8+ T cell",
+    "CD8 on CD28+ CD45RA+ CD8+ T cell",
+    "CD8 on CD28+ CD45RA- CD8+ T cell",
+    "CD8 on CD28- CD8+ T cell",
+    "CD4RA on Terminally Differentiated CD4+ T cell",
+    "CD45RA+ CD8+ T cell Absolute Count",
+    "CD45RA+ CD8+ T cell %T cell",
+    "CD45RA+ CD8+ T cell %CD8+ T cell",
+    "CD45RA- CD4+ T cell Absolute Count",
+    "CD45RA- CD4+ T cell %T cell",
+    "CD45RA- CD4+ T cell %CD4+ T cell",
+    "CD45RA on Terminally Differentiated CD8+ T cell",
+    "CD45RA on resting CD4 regulatory T cell",
+    "CD45RA on naive CD8+ T cell",
+    "CD45RA on naive CD4+ T cell",
+    "CD45RA on CD39+ resting CD4 regulatory T cell",
+    "CD45 on HLA DR+ T cell",
+    "CD45 on HLA DR+ CD4+ T cell",
+    "CD45 on CD8+ T cell",
+    "CD45 on CD4+ T cell",
+    "CD4+CD8+ T cell Absolute Count",
+    "CD4+CD8+ T cell %T cell",
+    "CD4+CD8+ T cell %leukocyte",
+    "CD4+/CD8+ T cell",
+    "CD4+ T cell Absolute Count",
+    "CD4+ T cell %T cell",
+    "CD4+ T cell %leukocyte",
+    "CD4+ CD8dim T cell Absolute Count",
+    "CD4+ CD8dim T cell %lymphocyte",
+    "CD4+ CD8dim T cell %leukocyte",
+    "CD4-CD8- T cell Absolute Count",
+    "CD4-CD8- T cell %T cell",
+    "CD4-CD8- T cell %leukocyte",
+    "CD4-CD8- Natural Killer T %T cell",
+    "CD4 regulatory T cell %T cell",
+    "CD4 regulatory T cell %CD4+ T cell",
+    "CD4 on secreting CD4 regulatory T cell",
+    "CD4 on resting CD4 regulatory T cell",
+    "CD4 on CD4 regulatory T cell",
+    "CD4 on CD4+ T cell",
+    "CD4 on CD39+ CD4+ T cell",
+    "CD4 on CD28+ CD45RA+ CD4+ T cell",
+    "CD4 on CD28+ CD45RA- CD4+ T cell",
+    "CD4 on CD28- CD4+ T cell",
+    "CD28- CD4-CD8- T cell %T cell",
+    "CD28- CD4-CD8- T cell %CD4-CD8- T cell",
+    "CD28- CD25++ CD8+ T cell Absolute Count",
+    "CD28- CD25++ CD8+ T cell %T cell",
+    "CD28- CD25++ CD8+ T cell %CD8+ T cell",
+    "CD28- CD127- CD25++ CD8+ T cell Absolute Count",
+    "CD28 on secreting CD4 regulatory T cell",
+    "CD28 on resting CD4 regulatory T cell",
+    "CD28 on CD45RA+ CD4+ T cell",
+    "CD28 on CD45RA- CD4 not regulatory T cell",
+    "CD28 on CD4+ T cell",
+    "CD28 on CD4 regulatory T cell",
+    "CD28 on CD39+ secreting CD4 regulatory T cell",
+    "CD28 on CD39+ resting CD4 regulatory T cell",
+    "CD28 on CD39+ CD8+ T cell",
+    "CD28 on CD39+ CD4+ T cell",
+    "CD28 on CD39+ activated CD4 regulatory T cell",
+    "CD28 on CD28+ CD45RA+ CD8+ T cell",
+    "CD28 on CD28+ CD45RA- CD8+ T cell",
+    "CD28 on CD28+ CD4+ T cell",
+    "CD28 on CD28+ CD4-CD8- T cell",
+    "CD28 on activated CD4 regulatory T cell",
+    "CD28 on activated & secreting CD4 regulatory T cell",
+    "CD25++ CD8+ T cell Absolute Count",
+    "CD25++ CD8+ T cell %T cell","CD25++ CD8+ T cell %CD8+ T cell",
+    "CD25++ CD45RA+ CD4 not regulatory T cell Absolute Count",
+    "CD25++ CD45RA+ CD4 not regulatory T cell %T cell",
+    "CD25++ CD45RA+ CD4 not regulatory T cell %CD4+ T cell",
+    "CD25++ CD45RA- CD4 not regulatory T cell Absolute Count",
+    "CD25++ CD45RA- CD4 not regulatory T cell %T cell",
+    "CD25++ CD45RA- CD4 not regulatory T cell %CD4+ T cell",
+    "CD25++ CD4+ T cell Absolute Count",
+    "CD25++ CD4+ T cell %T cell",
+    "CD25++ CD4+ T cell %CD4+ T cell",
+    "CD25 on secreting CD4 regulatory T cell",
+    "CD25 on resting CD4 regulatory T cell",
+    "CD25 on CD45RA+ CD4 not regulatory T cell","CD25 on CD45RA- CD4 not regulatory T cell",
+    "CD25 on CD4+ T cell",
+    "CD25 on CD39+ secreting CD4 regulatory T cell",
+    "CD25 on CD39+ resting CD4 regulatory T cell",
+    "CD25 on CD39+ CD4+ T cell",
+    "CD25 on CD39+ CD4 regulatory T cell",
+    "CD25 on CD39+ activated CD4 regulatory T cell",
+    "CD25 on CD28+ CD4+ T cell",
+    "CD25 on activated CD4 regulatory T cell",
+    "CD127- CD8+ T cell Absolute Count",
+    "CD127 on CD8+ T cell",
+    "CD127 on CD45RA+ CD4+ T cell","CD127 on CD45RA- CD4 not regulatory T cell",
+    "CD127 on CD4+ T cell",
+    "CD127 on CD28+ CD45RA+ CD8+ T cell",
+    "CD127 on CD28+ CD45RA- CD8+ T cell",
+    "CD127 on CD28+ CD4+ T cell",
+    "CD127 on CD28+ CD4-CD8- T cell",
+    "CD127 on CD28- CD8+ T cell",
+    "CCR7 on naive CD8+ T cell",
+    "CCR7 on naive CD4+ T cell",
+    "Activated CD4 regulatory T cell Absolute Count",
+    "Activated CD4 regulatory T cell %CD4 regulatory T cell",
+    "Activated & secreting CD4 regulatory T cell Absolute Count",
+    "Activated & secreting CD4 regulatory T cell %CD4+ T cell",
+    "Activated & secreting CD4 regulatory T cell %CD4 regulatory T cell",
+    "Activated & resting CD4 regulatory T cell Absolute Count",
+    "Activated & resting CD4 regulatory T cell %CD4+ T cell",
+    "Activated & resting CD4 regulatory T cell %CD4 regulatory T cell",
+    "CD4+CD8+ T cell Absolute Count",
+    "CD4+CD8+ T cell %T cell",
+    "CD4+CD8+ T cell %leukocyte","CD4+/CD8+ T cell",
+    "CD4+ T cell Absolute Count",
+    "CD4+ T cell %T cell",
+    "CD4+ T cell %leukocyte",
+    "CD4+ CD8dim T cell Absolute Count",
+    "CD4+ CD8dim T cell %lymphocyte", 
+    "CD4+ CD8dim T cell %leukocyte",
+    "CD4-CD8- T cell Absolute Count","
+    CD4-CD8- T cell %T cell","CD4-CD8- T cell %leukocyte",
+    "CD4-CD8- Natural Killer T %T cell",
+    "CD4 regulatory T cell %T cell",
+    "CD4 regulatory T cell %CD4+ T cell",
+    "CD4 on secreting CD4 regulatory T cell",
+    "CD4 on resting CD4 regulatory T cell",
+    "CD4 on naive CD4+ T cell",
+    "CD4 on HLA DR+ CD4+ T cell",
+    "CD4 on Effector Memory CD4+ T cell",
+    "CD4 on Central Memory CD4+ T cell",
+    "CD4 on CD45RA+ CD4+ T cell","CD4 on CD4+ T cell",
+    "CD4 on CD4 regulatory T cell",
+    "CD4 on CD39+ secreting CD4 regulatory T cell",
+    "CD4 on CD39+ CD4+ T cell",
+    "CD4 on CD39+ activated CD4 regulatory T cell",
+    "CD4 on CD28+ CD4+ T cell",
+    "CD4 on activated CD4 regulatory T cell",
+    "CD4 on activated & secreting CD4 regulatory T cell",
+    "CD39+ secreting CD4 regulatory T cell Absolute Count",
+    "CD39+ secreting CD4 regulatory T cell %secreting CD4 regulatory T cell", 
+    "CD39+ secreting CD4 regulatory T cell %CD4 regulatory T cell", 
+    "CD39+ resting CD4 regulatory T cell Absolute Count",
+    "CD39+ resting CD4 regulatory T cell %resting CD4 regulatory T cell",
+    "CD39+ resting CD4 regulatory T cell %CD4 regulatory T cell",
+    "CD39+ CD8+ T cell Absolute Count",
+    "CD39+ CD8+ T cell %T cell",
+    "CD39+ CD8+ T cell %CD8+ T cell",
+    "CD39+ CD4+ T cell Absolute Count", 
+    "CD39+ CD4+ T cell %T cell",
+    "CD39+ CD4+ T cell %CD4+ T cell",
+    "CD39+ activated CD4 regulatory T cell Absolute Count",
+    "CD39+ activated CD4 regulatory T cell %CD4 regulatory T cell",
+    "CD39+ activated CD4 regulatory T cell %activated CD4 regulatory T cell",
+    "CD39 on CD39+ secreting CD4 regulatory T cell","CD39 on CD39+ CD8+ T cell",
+    "CD39 on CD39+ CD4+ T cell",
+    "CD39 on CD39+ activated CD4 regulatory T cell",
+    "CD3 on Terminally Differentiated CD8+ T cell",
+    "CD3 on Terminally Differentiated CD4+ T cell",
+    "CD3 on secreting CD4 regulatory T cell",
+    "CD3 on resting CD4 regulatory T cell",
+    "CD3 on naive CD8+ T cell",
+    "CD3 on Naive CD4+ T cell",
+    "CD3 on HLA DR+ T cell",
+    "CD3 on HLA DR+ CD8+ T cell",
+    "CD3 on HLA DR+ CD4+ T cell",
+    "CD3 on Effector Memory CD8+ T cell",
+    "CD3 on Effector Memory CD4+ T cell",
+    "CD3 on Central Memory CD8+ T cell",
+    "CD3 on Central Memory CD4+ T cell",
+    "CD3 on CD8+ T cell",
+    "CD3 on CD45RA+ CD4+ T cell",
+    "CD3 on CD45RA- CD4+ T cell",
+    "CD3 on CD4+ T cell",
+    "CD3 on CD4 regulatory T cell",
+    "CD3 on CD39+ secreting CD4 regulatory T cell",
+    "CD3 on CD39+ resting CD4 regulatory T cell",
+    "CD3 on CD39+ CD8+ T cell",
+    "CD3 on CD39+ CD4+ T cell",
+    "CD3 on CD39+ activated CD4 regulatory T cell",
+    "CD3 on CD28+ CD45RA+ CD8+ T cell",
+    "CD3 on CD28+ CD45RA- CD8+ T cell",
+    "CD3 on CD28+ CD4+ T cell",
+    "CD3 on CD28- CD8+ T cell", 
+    "CD3 on activated CD4 regulatory T cell",
+    "CD3 on activated & secreting CD4 regulatory T cell",
+    "CD28+ CD45RA+ CD8dim T cell Absolute Count",
+    "CD28+ CD45RA+ CD8dim T cell %T cell",
+    "CD28+ CD45RA+ CD8dim T cell %CD8dim T cell",
+    "CD28+ CD45RA+ CD8+ T cell Absolute Count",
+    "CD28+ CD45RA+ CD8+ T cell %T cell",
+    "CD28+ CD45RA- CD8+ T cell %CD8+ T cell",
+    "CD28+ CD4-CD8- T cell %T cell",
+    "CD28+ CD4-CD8- T cell %CD4-CD8- T cell",
+    "CD28- CD8dim T cell Absolute Count",
+    "CD28- CD8dim T cell %T cell",
+    "CD28- CD8dim T cell %CD8dim T cell",
+    "CD28- CD8+ T cell Absolute Count",
+    "CD28- CD8+ T cell %T cell", 
+    "CD28- CD8+ T cell %CD8+ T cell",
+    "CD28- CD4-CD8- T cell Absolute Count"
+    ) ~ "T cells",
+
+  # > B cells
+`DISEASE/TRAIT` %in% c(
+    "B cell %CD3- lymphocyte",
+    "B cell %lymphocyte",
+    "B cell Absolute Count",
+    "B cell lymphocyte profile difference",
+    "BAFF-R on B cell",
+    "BAFF-R on CD20- B cell",
+    "BAFF-R on CD20- CD38- B cell",
+    "BAFF-R on CD24+ CD27+ B cell",
+    "BAFF-R on IgD- CD24- B cell",
+    "BAFF-R on IgD- CD27- B cell",
+    "BAFF-R on IgD- CD38- B cell",
+    "BAFF-R on IgD- CD38+ B cell",
+    "BAFF-R on IgD- CD38dim B cell",
+    "BAFF-R on IgD+ B cell",
+    "BAFF-R on IgD+ CD24- B cell",
+    "BAFF-R on IgD+ CD24+ B cell",
+    "BAFF-R on IgD+ CD38- B cell",
+    "BAFF-R on IgD+ CD38+ B cell",
+    "BAFF-R on IgD+ CD38dim B cell",
+    "BAFF-R on memory B cell",
+    "BAFF-R on naive-mature B cell",
+    "BAFF-R on switched memory B cell",
+    "BAFF-R on transitional B cell",
+    "BAFF-R on unswitched memory B cell",
+    "CD19 on B cell",
+    "CD19 on CD20- CD38- B cell",
+    "CD19 on CD24+ CD27+ B cell",
+    "CD19 on IgD- CD27- B cell",
+    "CD19 on IgD- CD38- B cell",
+    "CD19 on IgD- CD38dim B cell",
+    "CD19 on IgD+ B cell",
+    "CD19 on IgD+ CD24- B cell",
+    "CD19 on IgD+ CD24+ B cell",
+    "CD19 on IgD+ CD38- B cell",
+    "CD19 on IgD+ CD38+ B cell",
+    "CD19 on IgD+ CD38dim B cell",
+    "CD19 on memory B cell",
+    "CD19 on naive-mature B cell",
+    "CD19 on switched memory B cell",
+    "CD19 on transitional B cell",
+    "CD19 on unswitched memory B cell",
+    "CD20 on B cell",
+    "CD20 on CD24+ CD27+ B cell",
+    "CD20 on IgD- CD24- B cell",
+    "CD20 on IgD- CD27- B cell",
+    "CD20 on IgD- CD38- B cell",
+    "CD20 on IgD- CD38dim B cell",
+    "CD20 on IgD+ B cell",
+    "CD20 on IgD+ CD24- B cell",
+    "CD20 on IgD+ CD24+ B cell",
+    "CD20 on IgD+ CD38- B cell",
+    "CD20 on IgD+ CD38+ B cell",
+    "CD20 on IgD+ CD38dim B cell",
+    "CD20 on memory B cell",
+    "CD20 on naive-mature B cell",
+    "CD20 on switched memory B cell",
+    "CD20 on transitional B cell",
+    "CD20 on unswitched memory B cell",
+    "CD20- CD38- B cell %B cell",
+    "CD24 on CD24+ CD27+ B cell",
+    "CD24 on IgD- CD38- B cell",
+    "CD24 on IgD- CD38dim B cell",
+    "CD24 on IgD+ CD24+ B cell",
+    "CD24 on IgD+ CD38- B cell",
+    "CD24 on IgD+ CD38+ B cell",
+    "CD24 on memory B cell",
+    "CD24 on switched memory B cell",
+    "CD24 on transitional B cell",
+    "CD24 on unswitched memory B cell",
+    "CD24+ CD27+ B cell %B cell",
+    "CD24+ CD27+ B cell %lymphocyte",
+    "CD24+ CD27+ B cell Absolute Count",
+    "CD25 on B cell",
+    "CD25 on CD24+ CD27+ B cell",
+    "CD25 on IgD- CD24- B cell",
+    "CD25 on IgD- CD27- B cell",
+    "CD25 on IgD- CD38- B cell",
+    "CD25 on IgD- CD38dim B cell",
+    "CD25 on IgD+ B cell",
+    "CD25 on IgD+ CD24- B cell",
+    "CD25 on IgD+ CD24+ B cell",
+    "CD25 on IgD+ CD38- B cell",
+    "CD25 on IgD+ CD38+ B cell",
+    "CD25 on IgD+ CD38dim B cell",
+    "CD25 on memory B cell",
+    "CD25 on naive-mature B cell",
+    "CD25 on switched memory B cell",
+    "CD25 on transitional B cell",
+    "CD25 on unswitched memory B cell",
+    "CD27 on CD24+ CD27+ B cell",
+    "CD27 on IgD- CD38- B cell",
+    "CD27 on IgD- CD38+ B cell",
+    "CD27 on IgD- CD38dim B cell",
+    "CD27 on IgD+ CD24+ B cell",
+    "CD27 on memory B cell",
+    "CD27 on switched memory B cell",
+    "CD27 on unswitched memory B cell",
+    "CD38 on IgD- CD38dim B cell",
+    "CD38 on IgD+ B cell",
+    "CD38 on IgD+ CD24- B cell",
+    "CD38 on IgD+ CD38+ B cell",
+    "CD38 on IgD+ CD38dim B cell",
+    "CD38 on naive-mature B cell",
+    "CD38 on transitional B cell",
+    "CD45 on B cell",
+    "Diffuse large B cell lymphoma",
+    "HLA DR on B cell",
+    "IgD on IgD+ B cell",
+    "IgD on IgD+ CD24- B cell",
+    "IgD on IgD+ CD24+ B cell",
+    "IgD on IgD+ CD38- B cell",
+    "IgD on IgD+ CD38+ B cell",
+    "IgD on IgD+ CD38dim B cell",
+    "IgD on transitional B cell",
+    "IgD on unswitched memory B cell",
+    "IgD- CD27- B cell %B cell",
+    "IgD- CD27- B cell %lymphocyte",
+    "IgD- CD27- B cell Absolute Count",
+    "IgD- CD38- B cell %lymphocyte",
+    "IgD- CD38- B cell Absolute Count",
+    "IgD- CD38+ B cell %B cell",
+    "IgD- CD38dim B cell %lymphocyte",
+    "IgD+ B cell %B cell",
+    "IgD+ B cell %Lymphocyte",
+    "IgD+ B cell Absolute Count",
+    "IgD+ CD24- B cell %B cell",
+    "IgD+ CD24- B cell %lymphocyte",
+    "IgD+ CD24- B cell Absolute Count",
+    "IgD+ CD24+ B cell %B cell",
+    "IgD+ CD24+ B cell %lymphocyte",
+    "IgD+ CD24+ B cell Absolute Count",
+    "IgD+ CD38- B cell %B cell",
+    "IgD+ CD38- B cell %lymphocyte",
+    "IgD+ CD38- B cell Absolute Count",
+    "IgD+ CD38+ B cell %B cell",
+    "IgD+ CD38+ B cell %lymphocyte",
+    "IgD+ CD38+ B cell Absolute Count",
+    "IgD+ CD38dim B cell %lymphocyte",
+    "IgD+ CD38dim B cell Absolute Count",
+    "Memory B cell %B cell",
+    "Memory B cell %lymphocyte",
+    "Memory B cell Absolute Count",
+    "Naive-mature B cell %B cell",
+    "Naive-mature B cell %lymphocyte",
+    "Naive-mature B cell Absolute Count",
+    "Plasma Blast-Plasma Cell %B cell",
+    "Switched memory B cell %lymphocyte",
+    "Switched memory B cell Absolute Count",
+    "T/B cell",
+    "Transitional B cell Absolute Count",
+    "Unswitched memory B cell %B cell",
+    "Unswitched memory B cell %lymphocyte",
+    "Unswitched memory B cell Absolute Count",
+    "IgD on IgD+ CD38-  B cell",
+    "MHC class I polypeptide-related sequence B levels") ~ "B cells",
+
+  # > Antibodies
+`DISEASE/TRAIT` %in% c(
+    "IgA nephropathy",
+    "Serum IgA levels",
+    "IgA levels",
+    "Selective IgA deficiency",
+    "Serum galactose-deficient IgA1 levels",
+    "Serum galactose-deficient IgA1 levels in IgA nephropathy",
+    "Composite immunoglobulin trait (IgA/IgG)",
+    "Composite immunoglobulin trait (IgA x IgG x IgM)",
+    "Composite immunoglobulin trait (IgA x IgG/IgM)",
+    "Composite immunoglobulin trait (IgA x IgG)",
+    "Composite immunoglobulin trait (IgA/IgM)",
+    "IgG glycosylation",
+    "IgG levels",
+    "IgG N-glycosylation phenotypes (multivariate analysis)",
+    "Immunoglobulin light chain (AL) amyloidosis (serum IgG profile)",
+    "IgG bisecting N-acetyl glucosamine phenotypes (multivariate analysis)",
+    "IgG sialylation phenotypes (multivariate analysis)",
+    "IgG galactosylation phenotypes (multivariate analysis)",
+    "IgG disialylation phenotypes (multivariate analysis)",
+    "IgG monogalactosylation phenotypes (multivariate analysis)",
+    "IgG digalactosylation phenotypes (multivariate analysis)",
+    "IgG fucosylation phenotypes (multivariate analysis)",
+    "IgG monosialylation phenotypes (multivariate analysis)",
+    "IgG glycosylation patterns",
+    "IgM levels",
+    "Immunoglobulin superfamily DCC subclass member 4 levels (IGDCC4.9793.145.3)",
+    "Immunoglobulin superfamily DCC subclass member 3 levels (IGDCC3.11952.1.3)",
+    "IgE levels",
+    "Serum IgE levels",
+    "IgE level (plasma)") ~ "Antibodies",
+    # > No reported
+    TRUE ~ "No reported"
+  ))
+```
+
+Dimension
+
+```{r}
+dim(gwas_data)
+
+```
+
+## STEP 8: Add global response
+
+```{r}
+# Global response
+gwas_data <- gwas_data %>%
+  mutate(Global_response = case_when(
+    response %in% c("Complement", "Neutrophil", "Eosinophil", "Monocyte", "Coagulation cascade", "Inflammatory mediators", "Basophil",  "Macrophage", "Mast cells", "Leukocytes", "NK", "Pattern recognition", "Physical Barriers", "Adhesion molecules", "Growth factors") ~ "Innate response",
+    response %in% c("CRP", "IL-1", "IL-6", "IL-12", "IL-18", "IFN",  "TNF", "Chemiokines") ~ "Proinflammatory markers",
+    response %in% c("Antibodies", "T cells", "B cells") ~ "Adaptive response",
+    response %in% c("DCs", "HLA") ~ "Antigen presentation",
+    response %in% c("Inflammation", "Interleukines") ~ "Inflammation",
+    # Keep original value if it does not match any category
+    TRUE ~ "No reported"
+  )) %>%
+  # rename columns
+  dplyr::rename(StudyID = `STUDY ACCESSION`, Pvalue = `P-VALUE`, RiskAF = `RISK ALLELE FREQUENCY`)
+
+# Check
+unique(gwas_data$Global_response)
+```
+
+## STEP 9: Clean and save data
+
+Save information
+```{r Save gwas_data}
+gwas_data <- gwas_data %>%
+  
+  # significant variants
+  filter(Pvalue < 5e-8) %>%
+  
+  # Modify ancestries
+  mutate(general_ancestry = case_when(
+    general_ancestry == "Asian" ~  "AS",
+    general_ancestry == "African" ~  "AFR",
+    general_ancestry == "European" ~  "EUR",
+    general_ancestry == "Oceanian" ~  "O",
+    general_ancestry == "Other/No reported" ~  "Other",
+    general_ancestry == "Multiethnic" ~  "ME",
+    general_ancestry == "Latin American/Native American descent" ~  "LA/NAd",
+    general_ancestry == "Native American" ~  "NA",
+  .default = general_ancestry)) %>%
+  
+  # Add effect of the variants
+  mutate(Variant_Consequences = case_when(
+    # Impact: high
+    CONTEXT == "stop_gained" ~ "Stop gained",
+    CONTEXT == "frameshift_variant" ~ "Frameshift", #purple
+    CONTEXT == "start_lost" ~ "Start lost", #yellow
+    CONTEXT == "splice_donor_variant" ~ "Splice donor variant",
+   
+   # Impact: Moderate
+    CONTEXT == "missense_variant" ~ "Missense variant",
+    CONTEXT == "inframe_deletion" ~ "Inframe deletion",
+    CONTEXT == "inframe_insertion" ~ "Inframe insertion",
+   
+   # Impact: Low
+    CONTEXT == "synonymous_variant" ~ "Synonymous", 
+    CONTEXT == "splice_region_variant" ~ "Splice region variant",
+    CONTEXT == "splice_donor_region_variant" ~ "Splice donor region variant",
+    CONTEXT == "splice_polypyrimidine_tract_variant" ~ "Splice polypyrimidine tract variant",
+    CONTEXT == "splice_donor_5th_base_variant" ~ "Splice donor 5th base variant",
+   
+   # Impact: Modifier
+    CONTEXT %in% c("intergenic_variant; intergenic_variant; intergenic_variant", "intergenic_variant") ~ "Intergenic",
+    CONTEXT == "regulatory_region_variant" ~ "Regulatory region",
+    CONTEXT == "intron_variant" ~ "Intron",
+    CONTEXT == "5_prime_UTR_variant" ~ "UTR",
+    CONTEXT == "3_prime_UTR_variant" ~ "UTR",
+    CONTEXT == "TF_binding_site_variant" ~ "TF binding site",
+   .default = "No reported" )) %>%
+  
+  # Add impact of the variants 
+  mutate(Impact = case_when(
+    CONTEXT %in% c("stop_gained", "frameshift_variant", "start_lost", "splice_donor_variant") ~ "High",
+    CONTEXT %in% c("missense_variant", "inframe_deletion", "inframe_insertion") ~ "Moderate",
+    CONTEXT %in% c("synonymous_variant", "splice_region_variant", "splice_donor_region_variant", 
+                   "splice_polypyrimidine_tract_variant", "splice_donor_5th_base_variant") ~ "Low",
+    CONTEXT %in% c("intergenic_variant; intergenic_variant; intergenic_variant", "intergenic_variant", 
+                   "regulatory_region_variant", "intron_variant","5_prime_UTR_variant", "3_prime_UTR_variant", 
+                   "TF_binding_site_variant") ~ "Modifier",
+    .default = "No reported"
+  ))  %>%
+  # Keep only unique SNPs 
+  distinct() 
+dim(gwas_data)
+
+# save 
+write_tsv(gwas_data, "~/Documents/R/Review/Immune_Response_db.tsv.gz", quote = "none")
+```
+

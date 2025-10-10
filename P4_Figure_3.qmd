@@ -1,0 +1,505 @@
+# Figure 3: SNPs distribution within non-european populations
+> Author: Ana Laura Hernández-Ledesma
+> Contributions: Evelia Coss
+> Data: Oct 2025
+
+## STEP 1: Load Global information
+Load packages
+
+```{r, message=FALSE, warning=FALSE}
+library(RColorBrewer)
+library(tidyverse)
+library(cowplot) # Join plots
+library(circlize)
+library(ggpubr) # ggplot2 extension to create quick and customizable plots
+library(ggforce) # ggplot2 extension to create complex plots
+library(ggrepel) # prevent texts to overlap
+library(extrafont) # fonts
+library(ggtext)
+library(ComplexHeatmap) # heatmaps y upsetR 
+library(gridGraphics) # Join heatmaps 
+library(grid)  # Heatmap adjustment
+library(magick)
+library(patchwork)
+library(gridExtra)
+library(png)
+library(DT) #table
+```
+
+Load colorblind palette
+
+```{r SetPalette}
+# Set the color palette for ancestries, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
+ancestry_pal  <- c(   "#b30000", "#f46d43", "#fee090", "#3f007d","#addd8e","#238443", "#80cdc1", "#de77ae")
+names(ancestry_pal) <- c("AFR",     "As",      "EUR",     "ME",   "LA/NAd",  "NA",      "O",     "Other")
+scales::show_col(ancestry_pal) 
+
+# Set the color palette for continents, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
+continent_pal  <- c(     "#b30000", "#f46d43", "#fee090",  "#78c679",     "#80cdc1",   "#41ab5d")
+names(continent_pal) <- c("Africa",   "Asia",  "Europe", "South America", "Oceania", "North America")
+scales::show_col(continent_pal)
+
+# Set the color palette for types of immune response, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
+immune_response_pal  <- c(         "#92c5de",           "#f4a582",            "#a6dba0",                 "#b2abd2")
+names(immune_response_pal) <- c("Innate response", "Adaptive response", "Antigen presentation", "Proinflammatory markers")
+scales::show_col(immune_response_pal)
+
+# Set the color palette for specific sub-ancestries, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
+ancestries_palette  <- c(
+   "#b30000", "#b2182b",
+   "#d7301f","#f46d43","#f16913", "#fd8d3c", "#feb24c",
+   "#fee090","#166866",
+   "#3f007d","#54278f", "#54278f", "#6a51a3","#8073ac","#807dba","#8c96c6","#9e9ac8","#bcbddc", "#d8daeb","#efedf5",    
+   "#addd8e",
+   "#238443",
+   "#80cdc1",
+   "#de77ae",
+   "#fee090","#f46d43", "#de77ae", "#b30000",   "#addd8e",   "#80cdc1",  "#3f007d",     "#41ab5d")
+
+names(ancestries_palette) <- c(
+  "AFR","AFR_Am",
+  "SSA",  "As", "As_S", "As_SE", "EA",
+  "EUR","nonE",
+  "ME", "As,EUR", "As,O", "AFR,EUR,As,LA/NAd","AFR,EUR,LA/NAd", "AFR,LA/NAd", "AFR,LA/NAd,As,EUR", "EUR,AFR","EUR,LA/NAd,AFR", "EUR,LA/NAd,As,AFR","GME",
+  "LA/NAd",
+  "NA",
+  "Oceanian",
+  "Other",
+  "Europe", "Asia", "NR", "Africa", "Latin America","Oceania","Multicenter","North America" )
+scales::show_col(ancestries_palette) 
+
+# funtional / Variant association
+var_association_pal  <- c(     "#6E46AF", "#A5EBB3", "#FFD987", "#A1183E",   "#FC924B",  "#E1AE01")
+names(var_association_pal) <- c("Coding", "Promoter", "UTR",   "Accesible", "Intronic", "Intergenic")
+scales::show_col(var_association_pal)
+
+# Variants consequences
+var_association_pal <- c("#D9D9D9","#B2DF8A","#FB9A99","#FDBF6F","#F0E442","#C8B8DB","#66C2A5", "#FC8D62","#8DA0CB", 
+                         "#E78AC3","#A6D854","#FFD92F","#E41A1C","#BDBDBD")
+names(var_association_pal) <- c(
+  "Intergenic","Intron","UTR","Missense variant","Regulatory region","Inframe insertion", "Synonymous", "Splice region variant", "TF binding site","Splice polypyrimidine tract variant", "Splice donor 5th base variant","Splice donor variant","Stop gained","No reported")
+scales::show_col(var_association_pal)
+
+# Impact of variants
+impact_pal <- c(     "#D73027", "#FC8D59","#FEE08B", "#D9EF8B",  "#BDBDBD")
+names(impact_pal) <- c("High" ,"Moderate", "Low",   "Modifier","No reported")
+scales::show_col(impact_pal)
+```
+## STEP 2: Order of file rows and columns
+```{r}
+# Define the desired order for Global_response
+orden_global_response <- c("Adaptive response", "Antigen presentation", "Proinflammatory markers", "Innate response", "No reported")
+
+# Possible types of immune response
+immune_types <- c("Innate response", "Adaptive response", "Antigen presentation", "Proinflammatory markers", "No reported")
+
+# Order of answers
+orden_response <- c(
+      # Adaptive
+      "Antibodies", "T cells", "B cells",
+      # Antigen presentation
+      "DCs", "HLA",
+      # Proinflammatory markers
+      "IL-1", "IL-6", "IL-12", "IL-18", "CRP", "TNF", "IFN", "Chemiokines",
+      # Innate response
+       "Neutrophil", "Monocyte", "Basophil",   "Physical Barriers", "Eosinophil", "NK",  
+       "Coagulation cascade", "Inflammatory mediators", "Complement", "Macrophage", "Adhesion molecules",  "Pattern recognition",  "Mast cells", "Leukocytes",  "Growth factors")
+```
+
+
+Global variable with immune response in SNPs and ancestries.
+
+```{r GlobalData, warning=FALSE, message=FALSE}
+gwas_data <- read_tsv("data/Immune_Response_db.tsv.gz")
+
+# Check
+unique(gwas_data$Global_response)
+```
+
+## STEP 3: Data preparation: exploration of non-european ancestries data
+Shared SNPs between ancestries.
+
+```{r}
+# Select data
+gwas_data_ancestries <- gwas_data %>%
+  select(general_ancestry, Global_response, response, CHR_ID, SNPS, 
+         StudyID, CONTEXT, `FIRST AUTHOR`, `DATE`, `INITIAL SAMPLE SIZE`, PUBMEDID, MAPPED_GENE) %>%
+  # unique SNPs 
+   distinct()
+
+table(gwas_data_ancestries$general_ancestry)
+```
+### Table about papers (with EUR)
+Number of papers related to immune response.
+
+```{r}
+unique(gwas_data_ancestries$StudyID) %>% length()
+```
+
+### About SNPs data
+Shared SNPs between ancestries. Count how many and which ancestries are associated with each SNP.
+```{r}
+# Number of Shared SNPs
+snps_by_ancestry <- gwas_data_ancestries %>%
+  group_by(SNPS) %>%
+  summarise(n_ancestries = n_distinct(general_ancestry),
+            ancestries = paste(unique(general_ancestry), collapse = ", ")) %>%
+  arrange(desc(n_ancestries))
+head(snps_by_ancestry)
+```
+
+Non-European population SNPs.
+```{r}
+# Table with all ancestries
+EUR_SNPS_db <- snps_by_ancestry %>%
+  filter(ancestries == "EUR")  # ancestria Europea
+
+NonEUR_SNPS_db <- snps_by_ancestry %>%
+  group_by(ancestries) %>%
+  mutate(Group = ifelse(str_detect(ancestries, "\\bEUR\\b") & !str_detect(ancestries, "!EUR"), 
+                        "EUR-related SNPs", 
+                        "Non-EUR-related SNPs")) %>%
+  filter(Group == "Non-EUR-related SNPs") # sin ancestria Europea
+
+NonEUR_SNPS_db2 <- NonEUR_SNPS_db %>%
+  group_by(ancestries) %>%
+  mutate(Group = ifelse(str_detect(ancestries, "\\bME\\b") & !str_detect(ancestries, "!ME"), 
+                        "EUR-related SNPs", 
+                        "Non-EUR-related SNPs")) %>%
+  filter(Group == "Non-EUR-related SNPs") # sin ancestria Europea
+
+# Check for the SNPs that are not present in Europeans
+NonEUR_SNPs_filter <- anti_join(NonEUR_SNPS_db2, EUR_SNPS_db, by = "SNPS")
+
+```
+
+Data without European SNPs.
+```{r}
+# Select data from non-European ancestries
+gwas_data_cleaned <- gwas_data_ancestries %>%
+  # select specific columns, according with the analysis
+  select(Global_response, general_ancestry, response, CHR_ID, SNPS, 
+         StudyID, CONTEXT) %>%
+  # SNPs that are not shared with European ancestries
+  filter(SNPS %in% NonEUR_snps) %>% 
+  filter(general_ancestry != "ME") %>% 
+  # Keep only unique SNPs 
+  distinct(SNPS, .keep_all = TRUE)  
+  
+dim(gwas_data_cleaned)  
+```
+1,875 unique, non-redundant SNPs, some of which are repeated or shared between ancestries.
+
+### Table 1: About papers (without EUR)
+
+Large GWAS sample size by global response and ancestry for single and multi-ancestry studies.
+```{r}
+Table1_papers_MEancestry <- gwas_data_ancestries %>%
+  # Clean data related with Study ID (without EUR)
+  filter(StudyID %in% unique(gwas_data_cleaned$StudyID)) %>%
+  # Order and select columns
+  select(Global_response, response, general_ancestry, `FIRST AUTHOR`, `DATE`, `INITIAL SAMPLE SIZE`, PUBMEDID) %>%
+  # Single paper per row
+  distinct(PUBMEDID, .keep_all = TRUE) %>%
+  # rename columns
+  rename("Immune response" = Global_response, Response = response, Ancestry  = general_ancestry,
+    Year = DATE, "Firt Author" = `FIRST AUTHOR`, "Total samples" = `INITIAL SAMPLE SIZE`, "PUDMED ID" = PUBMEDID)
+
+# Obtain only year
+Table1_papers_MEancestry$Year <- format(as.Date(Table1_papers_MEancestry$Year), "%Y")
+  
+# Show information
+Table1_papers_MEancestry %>%
+  DT::datatable()
+```
+
+## STEP 4: Clean data acoording with Non-EUR SNPs (list)
+```{r snps_by_ancestry_list}
+# Data set para Upset R
+# Create list of SNPs by ancestry
+snps_by_ancestry_list <- gwas_data_ancestries %>% 
+  filter(SNPS %in% NonEUR_snps) %>% # SNPs from non-European populations
+  group_by(general_ancestry) %>%
+  filter(general_ancestry != "ME") %>%
+  summarise(SNPs = list(unique(SNPS)), .groups = "drop") %>%
+  deframe()  # Converts the dataframe to a list
+
+```
+
+## STEP 5:  Figure 3a. Ancestry-specific variants
+```{r Proportion of Ancestry-specific variants}
+# Prepare data
+immune_snps <- gwas_data_ancestries %>%
+  group_by(general_ancestry) %>%
+  mutate(Group = ifelse(str_detect(general_ancestry, "\\bEUR\\b") & !str_detect(general_ancestry, "!EUR"), 
+                        "EUR-related SNPs", 
+                        "Non-EUR-related SNPs")) %>%
+filter(Group == "Non-EUR-related SNPs")
+  
+immune_snps_1 <- immune_snps %>%
+  group_by(general_ancestry) %>%
+  mutate(Group = ifelse(str_detect(general_ancestry, "\\bME\\b") & !str_detect(general_ancestry, "!ME"), 
+                        "EUR-related SNPs", 
+                        "Non-EUR-related SNPs")) %>%
+  filter(Group == "Non-EUR-related SNPs") 
+
+immune_snps_2 <- immune_snps_1 %>%
+  group_by(general_ancestry) %>%
+  mutate(Group = ifelse(str_detect(general_ancestry, "\\bOther\\b") & !str_detect(general_ancestry, "!ME"), 
+                        "EUR-related SNPs", 
+                        "Non-EUR-related SNPs")) %>%
+  filter(Group == "Non-EUR-related SNPs") 
+
+# Identify ancestries by SNP
+snp_ancestry <- immune_snps_2 %>%
+  group_by(SNPS) %>%
+  summarise(n_ancestries = n_distinct(general_ancestry), .groups = "drop")
+
+# Classify SNPs in the original dataframe
+snp_ancestry_group <- immune_snps_2%>%
+  left_join(snp_ancestry, by = "SNPS") %>%
+  mutate(Category = ifelse(n_ancestries == 1, "Unique", "Shared"))
+
+# Count shared and exclusive SNPs
+ancestries_sum <- snp_ancestry_group %>%
+  group_by(general_ancestry, Category) %>%
+  summarise(Count = n_distinct(SNPS), .groups = "drop") %>%
+  group_by(general_ancestry) %>%
+  mutate(Proportion = Count / sum(Count) * 100)
+
+# Set color palette
+colors <- c("Unique" = "#1f78b4", 
+            "Shared" = "#a6cee3")  
+
+# Plot
+fig3a <- ggplot(ancestries_sum, aes(x = general_ancestry, y = Proportion, fill = Category)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_manual(values = colors) +
+  labs(title = "A. Proportion of ancestry-specific and shared variants",
+       x = "Ancestry",
+       y = "Proportion of SNPs (%)",
+       fill = "SNP Type") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 12, hjust = 0.5,  face = "bold"),
+    legend.key.size = unit(0.3,'cm'),
+    axis.text.x = element_text(size = 8, hjust = 0.5),
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    legend.text = element_text(size=8),
+    axis.title = element_text(size = 8, face = "bold"), 
+    axis.text.y = element_text(size = 8))
+fig3a 
+```
+
+## STEP 6:  Figure 3b. Immune traits associated with ancestry-specific variants
+```{r Immune traits associated with ancestry-specific variants}
+# Check for the SNPs that are ancestry-specific
+immune_snps_3 <- immune_snps_2 %>%
+  select(general_ancestry, Global_response, SNPS)
+
+immune_snps_exclusive <- immune_snps_3 %>%
+  group_by(SNPS) %>%
+  mutate(n_ancestries = n_distinct(general_ancestry)) %>%  # count how many ancestries does a SNP have
+  filter(n_ancestries == 1) %>%                            # Keeping the ancestry-exclusive SNPs
+  ungroup()
+
+immune_snps_4 <-immune_snps_exclusive %>%
+  count(general_ancestry, Global_response, name = "exclusive_SNPs") 
+
+fig3b <- ggplot(immune_snps_4 , aes(x = general_ancestry, y = Global_response, size = exclusive_SNPs, color = Global_response)) +
+  geom_point(alpha = 0.7) +
+  scale_size(range = c(2, 10)) +  # Bubble size
+  theme_minimal() +
+  theme(plot.title = element_text(size = 12, hjust = 0.5, face = "bold"),
+    legend.key.size = unit(0.1,'cm'),
+    axis.text.x = element_text(size = 8, hjust = 0.5),
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    legend.text = element_text(size=8),
+    axis.title = element_text(size = 8, face = "bold"), 
+    axis.text.y = element_text(size = 8),
+    legend.box = "vertical"
+  ) +
+  labs(
+    title = "B. Frequency of immune-associated traits \namong ancestry-specific variants",
+    x = "Ancestry",
+    y = "Immune Response",
+    size = "Number of SNPs",
+    color = "Immune Response"
+  )+
+  guides(
+    color = "none",
+    size = guide_legend(override.aes = list(size = 3)))
+
+#Join plots
+fig_3ab <- plot_grid(
+  fig3a, fig3b,
+  labels = c("", ""),
+  ncol = 2
+)
+fig_3ab
+
+```
+
+## STEP 7:  Figure 3c. Distribution of unique ancestry-specific variants
+```{r Distribution of unique ancestry-specific variants}
+### Check for the SNPs that are ancestry-specific
+## Select only exclusive snps
+excl_snps <- immune_snps_2 %>%
+  select(general_ancestry, Global_response,response, CHR_ID, SNPS)
+
+
+excl_snps2 <- excl_snps %>%
+  group_by(SNPS) %>%
+  mutate(n_ancestries = n_distinct(general_ancestry)) %>% 
+  filter(n_ancestries == 1) %>% # Keeping the ancestry-exclusive SNPs
+  ungroup()
+
+#Summarise
+snps_sum <-excl_snps2 %>%
+  group_by(CHR_ID, Global_response, general_ancestry) %>%
+  summarise(n_snp = n_distinct(SNPS), .groups = "drop") %>%
+  filter(!is.na(CHR_ID))
+
+# Set chromosome order
+orden_CHR_ID <- c(as.character(1:22), "X", "Y")
+snps_sum$CHR_ID <- factor(snps_sum$CHR_ID, levels = orden_CHR_ID)
+snps_sum <-snps_sum %>%
+  filter(!is.na(CHR_ID))
+
+fig3c<-  ggplot(snps_sum, aes(x = CHR_ID, y = n_snp, fill = Global_response)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = immune_response_pal)+ 
+  facet_wrap(~ general_ancestry, scales = "free_y", ncol = 1) +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 12, hjust = 0.5, face = "bold"),
+    panel.grid.major.x = element_blank(),
+    legend.position = "none",
+    legend.title = element_blank(),
+    axis.title.x = element_text(size = 8, face = "bold"),
+    axis.title.y = element_text(size = 8, face = "bold"),
+    axis.text.x = element_text(size =8)) +
+  labs(title = "C. Genomic distribution of unique ancestry-specific variants by ancestry",
+     x = "Chromosome", y = "Unique SNPs")
+fig3c
+```
+
+## STEP 8:  Figure 3d. Enrichment of immune categories among unique ancestry-specific variants 
+```{r Enrichment of immune categories among unique ancestry-specific variants}
+#Summarise
+snps_anc_sum <-excl_snps2 %>%
+  select(Global_response, general_ancestry, response, SNPS)%>%
+  group_by(Global_response, general_ancestry, response, SNPS) %>%
+  summarise(n_snp = n_distinct(SNPS), .groups = "drop") %>%
+  unique()
+
+snps_anc_sum <-snps_anc_sum %>%
+  select(Global_response, general_ancestry, response) %>%
+    count(Global_response, general_ancestry, response) 
+
+# Plot  
+fig3d <- ggplot(snps_anc_sum, aes(x = general_ancestry, y = response, color = Global_response)) +
+  geom_point(aes(size = n )) +
+  scale_size(range = c(1, 5)) +
+  scale_color_manual(values = immune_response_pal)+ 
+  theme_minimal() +
+  labs(
+    x = "Ancestry",
+    y = "Immune Response Category",
+    size = "Unique SNPs",
+    color = "Proportion of unique SNPs",
+    title = "D. Enrichment of immune categories among \n unique ancestry-specific variants"
+  ) +
+  theme(
+    plot.title = element_text(size = 12, hjust = 0.5, face = "bold"),
+    panel.grid.major.x = element_blank(),
+    legend.position = "right",
+    legend.box = "vertical",
+    legend.title = element_blank(),
+    axis.title.x = element_text(size = 8, face = "bold"),
+    axis.title.y = element_text(size = 8, face = "bold"),
+    axis.text.x = element_text(size =8))+
+    guides(
+    size = guide_legend(order = 1, hjust = 0.5),
+    color = guide_legend(order = 2, hjust = 0.5))
+fig3d
+
+# Join plots
+fig_3cd <- plot_grid(
+  fig3c, fig3d,
+  labels = c("", ""),
+  ncol = 2,
+  rel_heights = c(0.8,2)
+)
+fig_3cd
+
+snps_anc_sum_perc <-  snps_anc_sum%>%
+  group_by(general_ancestry, response) %>%
+  summarise(total_response = sum(n)) %>%
+  group_by(general_ancestry) %>%
+  mutate(percentage = total_response / sum(total_response) * 100) %>%
+  ungroup()
+
+```
+
+## STEP 9:  Figure 3e. Principal mapped genes associated to the ancestry-specific variants 
+```{r Principal mapped genes associated to the ancestry-specific variants }
+exc_genes <-immune_snps_2%>%
+  select(general_ancestry, Global_response, SNPS, MAPPED_GENE)%>%
+  count(general_ancestry, MAPPED_GENE) 
+
+exc_genes <- exc_genes %>%
+  filter(!is.na(MAPPED_GENE))
+
+genes_exclusive <- exc_genes %>%
+  group_by(MAPPED_GENE) %>%
+  mutate(n_ancestries = n_distinct(general_ancestry)) %>%
+  ungroup() %>%
+  filter(n_ancestries == 1) %>%
+  group_by(general_ancestry, MAPPED_GENE) %>%
+  summarise(total_SNPs = sum(n), .groups = "drop") %>%
+  arrange(general_ancestry, desc(total_SNPs))
+
+# Choose the most frequent genes by ancestry
+genes_exclusive_top <- genes_exclusive %>%
+  group_by(general_ancestry) %>%
+  slice_max(total_SNPs, n = 10, with_ties = FALSE)%>%
+  ungroup()
+
+# Plot
+fig3e <- ggplot(genes_exclusive_top, 
+       aes(x = reorder(MAPPED_GENE, total_SNPs), 
+           y = total_SNPs, fill = general_ancestry)) +
+  geom_col(show.legend = FALSE) +
+  scale_fill_manual(values = ancestry_pal)+ 
+  facet_wrap(~general_ancestry, scales = "free_y", ncol = 4) +
+  coord_flip() +
+  theme_minimal() +
+  labs(
+    title = "E. Top mapped genes associated with ancestry-specific variants",
+    x = "Mapped Gene",
+    y = "Number of SNPs"
+  ) +
+  theme(
+    plot.title = element_text(size = 12, hjust = 0.5,face = "bold"),
+    panel.grid.major.x = element_blank(),
+    strip.text = element_text(face = "bold"),
+    legend.position = "right",
+    legend.box = "vertical",
+    legend.title = element_blank(),
+    axis.title.x = element_text(size = 8, face = "bold"),
+    axis.title.y = element_text(size = 8, face = "bold"),
+    axis.text.x = element_text(size =8))
+
+# Join plots for figure 3
+fig_3 <- plot_grid(
+  fig_3ab, fig_3cd, fig3e,
+  labels = c("","",""),
+  ncol = 1,
+  rel_heights = c(1,1.5,1)
+)
+fig_3
+
+ggsave(filename= "~/Documents/R/Review/Sept/Figures/Figure_3.pdf", plot= fig_3, width = 11, height = 15, dpi=300, units = "in", bg = "white" )
+
+```
