@@ -48,4 +48,4 @@ This work was supported by Luis Aguilar, Alejandro León, and Jair Santiago Garc
 
 - Ana Hernandez (email: annhled@gmail.com, [GitHub](https://github.com/annhled6))
 - Evelia Coss (email: ecossnav@gmail.com, [GitHub](https://github.com/EveliaCoss/), [WebPage](https://eveliacoss.github.io/))
-- Alejandra Medina-Rivera (email: amedina@liigh.unam.mx, corresponding author contact information)
+- Alejandra Medina-Rivera (email: amedina@liigh.unam.mx, corresponding author)
