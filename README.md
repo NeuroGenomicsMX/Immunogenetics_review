@@ -34,7 +34,15 @@ All downstream analyses and figures were generated using the input file [`Immune
 
 ## Acknowledgments
 
-We thank the [GWAS Catalog](http://ebi.ac.uk/gwas/) team for providing open access to genetic association data. We are also grateful to our collaborators for their support throughout this project. This work was supported by Luis Aguilar, Alejandro León, and Jair Santiago García Sotelo from the Laboratorio Nacional de Visualización Científica Avanzada (LAVIS). We also thank Carina Uribe Díaz, Alejandra Castillo Carbajal, and Christian Molina Aguilar for their technical assistance.
+We thank the [GWAS Catalog](http://ebi.ac.uk/gwas/) team for providing open access to genetic association data. We are also grateful to our collaborators for their support throughout this project. 
+
+This project was supported by CONACYT-FORDECYT-PRONACES grants no. [11311] and [6390]. A.M.R. was supported by Programa de Apoyo a Proyectos de Investigación e Innovación Tecnológica–Universidad Nacional Autónoma de México (PAPIIT-UNAM) grants no. IA203021 and IN218023.
+
+ALHL is a doctoral student from Programa de Doctorado en Ciencias Biomédicas, Universidad Nacional Autónoma de México (UNAM) and she received fellowship CVU/Becario (711015/790972) from Consejo Nacional de Humanidades, Ciencia y Tecnología (CONAHCYT). 
+
+ELCN is a postdoctoral researcher at Laboratorio Internacional de Investigación sobre el Genoma Humano (LIIGH-UNAM) and she holds a fellowship from CONAHCYT (CVU 781634). 
+
+This work was supported by Luis Aguilar, Alejandro León, and Jair Santiago García Sotelo from the Laboratorio Nacional de Visualización Científica Avanzada (LAVIS). We also thank Carina Uribe Díaz, Alejandra Castillo Carbajal, and Christian Molina Aguilar for their technical assistance.
 
 ## Contact
 
