@@ -8,7 +8,7 @@ The data was downloading from GWAS catalog at Feb 12th, 2025.
 
 ## Data processing
 
-To obtain [Immune_Response_db.tsv.gz](https://github.com/NeuroGenomicsMX/Immunogenetics_review/blob/main/data/Immune_Response_db.tsv.gz), we used the script [P1_Data_preparation.qmd](https://github.com/NeuroGenomicsMX/Immunogenetics_review/blob/main/P1_Data_preparation.qmd).
+To obtain [`Immune_Response_db.tsv.gz`](https://github.com/NeuroGenomicsMX/Immunogenetics_review/blob/main/data/Immune_Response_db.tsv.gz), we used the script [`P1_Data_preparation.qmd`](https://github.com/NeuroGenomicsMX/Immunogenetics_review/blob/main/P1_Data_preparation.qmd).
 
 This script performs the following steps:
 
