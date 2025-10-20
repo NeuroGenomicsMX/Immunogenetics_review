@@ -40,7 +40,7 @@ names(continent_pal) <- c("Africa",   "Asia",  "Europe", "South America", "Ocean
 scales::show_col(continent_pal)
 
 # Set the color palette for types of immune response, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
-immune_response_pal  <- c(         "#92c5de",           "#f4a582",            "#a6dba0",                 "#b2abd2")
+immune_response_pal  <- c("#92c5de","#993404","#dfc27d","#b2abd2")
 names(immune_response_pal) <- c("Innate response", "Adaptive response", "Antigen presentation", "Proinflammatory markers")
 scales::show_col(immune_response_pal)
 
@@ -170,6 +170,10 @@ NonEUR_SNPS_db2 <- NonEUR_SNPS_db %>%
 
 # Check for the SNPs that are not present in Europeans
 NonEUR_SNPs_filter <- anti_join(NonEUR_SNPS_db2, EUR_SNPS_db, by = "SNPS")
+
+# Only SNPs
+NonEUR_snps <- NonEUR_SNPS_db$SNPS
+length(NonEUR_snps)
 
 ```
 
@@ -309,6 +313,7 @@ immune_snps_4 <-immune_snps_exclusive %>%
 fig3b <- ggplot(immune_snps_4 , aes(x = general_ancestry, y = Global_response, size = exclusive_SNPs, color = Global_response)) +
   geom_point(alpha = 0.7) +
   scale_size(range = c(2, 10)) +  # Bubble size
+  scale_color_manual(values = immune_response_pal) +
   theme_minimal() +
   theme(plot.title = element_text(size = 12, hjust = 0.5, face = "bold"),
     legend.key.size = unit(0.1,'cm'),
@@ -382,6 +387,27 @@ fig3c<-  ggplot(snps_sum, aes(x = CHR_ID, y = n_snp, fill = Global_response)) +
   labs(title = "C. Genomic distribution of unique ancestry-specific variants by ancestry",
      x = "Chromosome", y = "Unique SNPs")
 fig3c
+
+fig3c_leg<-  ggplot(snps_sum, aes(x = CHR_ID, y = n_snp, fill = Global_response)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = immune_response_pal)+ 
+  facet_wrap(~ general_ancestry, scales = "free_y", ncol = 1) +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 12, hjust = 0.5, face = "bold"),
+    panel.grid.major.x = element_blank(),
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    axis.title.x = element_text(size = 8, face = "bold"),
+    axis.title.y = element_text(size = 8, face = "bold"),
+    axis.text.x = element_text(size =8)) +
+  labs(title = "C. Genomic distribution of unique ancestry-specific variants by ancestry",
+     x = "Chromosome", y = "Unique SNPs")
+fig3c_leg
+
+# Extract legend
+legend_fig3c <- get_plot_component(fig3c_leg, 
+                                   pattern = "guide-box-bottom",
+                                   return_all =  FALSE) 
 ```
 
 ## STEP 8:  Figure 3d. Enrichment of immune categories among unique ancestry-specific variants 
@@ -413,7 +439,7 @@ fig3d <- ggplot(snps_anc_sum, aes(x = general_ancestry, y = response, color = Gl
   theme(
     plot.title = element_text(size = 12, hjust = 0.5, face = "bold"),
     panel.grid.major.x = element_blank(),
-    legend.position = "right",
+    legend.position = "bottom",
     legend.box = "vertical",
     legend.title = element_blank(),
     axis.title.x = element_text(size = 8, face = "bold"),
@@ -421,7 +447,7 @@ fig3d <- ggplot(snps_anc_sum, aes(x = general_ancestry, y = response, color = Gl
     axis.text.x = element_text(size =8))+
     guides(
     size = guide_legend(order = 1, hjust = 0.5),
-    color = guide_legend(order = 2, hjust = 0.5))
+    color = "none")
 fig3d
 
 # Join plots
@@ -432,6 +458,15 @@ fig_3cd <- plot_grid(
   rel_heights = c(0.8,2)
 )
 fig_3cd
+
+fig_3cd_leg <- plot_grid(
+  fig_3cd, legend_fig3c,
+  labels = c("", ""),
+  ncol = 1,
+  rel_heights = c(1,0.2)
+)
+fig_3cd_leg
+
 
 snps_anc_sum_perc <-  snps_anc_sum%>%
   group_by(general_ancestry, response) %>%
@@ -493,7 +528,7 @@ fig3e <- ggplot(genes_exclusive_top,
 
 # Join plots for figure 3
 fig_3 <- plot_grid(
-  fig_3ab, fig_3cd, fig3e,
+  fig_3ab, fig_3cd_leg, fig3e,
   labels = c("","",""),
   ncol = 1,
   rel_heights = c(1,1.5,1)
@@ -502,4 +537,5 @@ fig_3
 
 ggsave(filename= "~/Documents/R/Review/Sept/Figures/Figure_3.pdf", plot= fig_3, width = 11, height = 15, dpi=300, units = "in", bg = "white" )
 
+ggsave(filename= "~/Documents/R/Review/Sept/Figures/Figure_3.png", plot= fig_3, width = 11, height = 15, dpi=300, units = "in", bg = "white" )
 ```
