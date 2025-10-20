@@ -2,11 +2,22 @@
 
 Data analysis performed for the "Exploring genetic variations associated with the immune response in underrepresented populations". 
 
+### Authors
+
++ Hernández-Ledesma, Ana Laura (ALHL)<sub>1</sub> - email: annhled@gmail.com, [GitHub](https://github.com/annhled6), [ORCID](https://orcid.org/0000-0002-8819-7471)
++ Coss-Navarrete, Evelia Lorena (ELCN)<sub>1</sub> - email: ecossnav@gmail.com, [GitHub](https://github.com/EveliaCoss/), [WebPage](https://eveliacoss.github.io/), [ORCID](https://orcid.org/0000-0002-7087-2977)
++ Sevilla-Parra Grecia (GSP)<sub>1</sub> - [ORCID](https://orcid.org/0009-0002-6737-6873)
++ Bravo-García, María Fernanda (MFBG)<sub>1</sub> - [ORCID](https://orcid.org/0009-0003-0280-9006)
++ Schäfer, Alejandra (AS)<sub>1</sub> - [ORCID](https://orcid.org/0000-0002-2300-9230) 
++ Brunck, Marion E.G (MEGB)<sub>2</sub> - [ORCID](https://orcid.org/0000-0001-8994-8276) 
++ Medina-Rivera, Alejandra (AM)<sub>1</sub> - [ORCID](https://orcid.org/0000-0002-7912-2718)
+
+*Affiliation*
+<sub>1</sub>: Laboratorio Internacional de Investigación sobre el Genoma Humano (LIIGH), Universidad Nacional Autónoma de México (UNAM). Santiago de Querétaro, México. <sub>2</sub>: Instituto de Investigaciones Biomédicas,  Universidad Nacional Autónoma de México. Ciudad de México, México (UNAM).
+
 ### Citation
 
-xxxx
-
-DOI
+> Hernández-Ledesma, Ana Laura, et al. Año, revista. DOI
 
 ## Abstract
 
@@ -26,6 +37,5 @@ We thank the [GWAS Catalog](http://ebi.ac.uk/gwas/) team for providing open acce
 ## Contact
 
 - Ana Hernandez (email: annhled@gmail.com, [GitHub](https://github.com/annhled6))
-
 - Evelia Coss (email: ecossnav@gmail.com, [GitHub](https://github.com/EveliaCoss/), [WebPage](https://eveliacoss.github.io/))
-
+- Alejandra Medina-Rivera (email: amedina@liigh.unam.mx, corresponding author contact information)
