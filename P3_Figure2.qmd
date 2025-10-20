@@ -22,7 +22,7 @@ library(treemapify)
 ```{r Set palettes}
 # Set the color palette for ancestries, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
 ancestry_pal  <- c(   "#b30000", "#f46d43", "#fee090", "#3f007d","#addd8e","#238443", "#80cdc1", "#de77ae")
-names(ancestry_pal) <- c("AFR",     "As",      "EUR",     "ME",   "LA/NAd",  "NA",      "O",     "Other")
+names(ancestry_pal) <- c("AFR",     "As",      "EUR",     "ME",   "LA/NAd",  "NAm",      "O",     "Other")
 scales::show_col(ancestry_pal) 
 
 # Set the color palette for continents, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
@@ -166,7 +166,22 @@ anc_noneur <- anc_noneur %>%
          label = paste0(round(percentage, 1), "%"))
 
 anc_noneur <- anc_noneur %>%
-  filter(label != "0%")
+  filter(label != "0%")%>%
+  filter(sp_ancestry != "AFR,EUR,As,LA/NA")%>%
+  filter(sp_ancestry != "As,EUR")
+
+anc_noneur <- anc_noneur %>%
+  mutate(sp_ancestry= replace(sp_ancestry, sp_ancestry == "AFR_Am", "African American")) %>%
+  mutate(sp_ancestry= replace(sp_ancestry, sp_ancestry == "As_S", "South Asian")) %>%
+  mutate(sp_ancestry= replace(sp_ancestry, sp_ancestry == "As_SE", "South-East Asian"))%>%
+  mutate(sp_ancestry= replace(sp_ancestry, sp_ancestry == "EA", "East Asian")) %>%
+  mutate(sp_ancestry= replace(sp_ancestry, sp_ancestry == "GME", "Greater Middle Eastern"))%>%
+  mutate(sp_ancestry= replace(sp_ancestry, sp_ancestry == "SSA", "African Sub-Saharian"))%>%
+  mutate(sp_ancestry= replace(sp_ancestry, sp_ancestry == "NAm", "Native American"))%>%
+  mutate(sp_ancestry= replace(sp_ancestry, sp_ancestry == "AFR", "African"))%>%
+  mutate(sp_ancestry= replace(sp_ancestry, sp_ancestry == "As", "Asian"))%>%
+  mutate(sp_ancestry= replace(sp_ancestry, sp_ancestry == "O", "Oceanian")) 
+
 
 fig2b <-  ggplot(anc_noneur, aes(x = reorder(sp_ancestry, +percentage), y = percentage))+
   geom_bar(stat = "identity",fill = "#bfd3e6")+
@@ -175,7 +190,7 @@ fig2b <-  ggplot(anc_noneur, aes(x = reorder(sp_ancestry, +percentage), y = perc
   labs(y = "Percentage (%)", 
        fill = "",
        x = "Reported ancestry",
-       title = "B. Frequency of ancestries reported \namong non-European variants")+
+       title = "B. Frequency of ancestries reported \n among non-European variants")+
   theme_minimal()+
   theme(theme(plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"),
         plot.title = element_text(size = 12, hjust = 0.5)),
@@ -363,7 +378,7 @@ fig2e2 <-ggplot(context_types, aes(x=context_type, y=n,fill=response_type))+
         legend.text = element_text(size=9),
         axis.title = element_text(size = 8, face = "bold"),
         axis.text.y = element_text(size =8),
-        axis.text.x = element_text(size =8),
+        axis.text.x = element_text(size =7),
         axis.title.x = element_blank(),
         plot.margin = margin(1, 1, 5, 10, unit = "pt")) #t, r, b, l
 fig2e2
@@ -373,14 +388,14 @@ fig_up <- plot_grid(
   fig2a, fig2b, 
   labels = c("",""), 
   ncol=2,
-  rel_widths = c(1,1))
+  rel_widths = c(1.2,1))
 
 # Bottom plots
 fig_down <- plot_grid(
   fig2c, fig2d, fig2e2,
   labels = c("","",""), 
   ncol=3,
-  rel_widths = c(0.8,1,1.2))
+  rel_widths = c(0.8,1,1.4))
 
 # Bottom plots + legend
 fig_legend <- plot_grid(
@@ -397,5 +412,5 @@ fig2_B<- plot_grid(
   ncol=1)
 
 ggsave(filename= "~/Documents/R/Review/Sept/Figures/Figure_2.pdf", plot= fig2_B, width = 11, height = 12, dpi=300, units = "in", bg = "white" )
-ggsave(filename= "~/Documents/R/Review/Sept/Figures/Figure_2.png", plot= fig2_B, width = 11, height = 12, dpi=300, units = "in", bg = "white" )
+ggsave(filename= "~/Documents/R/Review/Sept/Figures/Figure_2.png", plot= fig2_B, width = 11, height = 11, dpi=400, units = "in", bg = "white" )
 ```
