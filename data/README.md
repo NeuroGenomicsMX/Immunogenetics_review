@@ -13,6 +13,6 @@ To obtain [`Immune_Response_db.tsv.gz`](https://github.com/NeuroGenomicsMX/Immun
 This script performs the following steps:
 
 1. Loads and filters the three GWAS datasets listed above.
-2. Selects associations relevant to **immune response traits**.
+2. Selects associations relevant to [**immune response traits**](https://docs.google.com/spreadsheets/d/1qZhQbTgYk9l57-Xg9IkAKT106EGmaEQ6f9zqvxje-M4/edit?usp=sharing).
 3. Annotates and compacts the results into a modular TSV format.
 4. Compresses the output for downstream use in figure generation.
