@@ -16,6 +16,7 @@ library(ggnewscale)
 library(ggsankey) # devtools::install_github("davidsjoberg/ggsankey")
 library(cowplot) # Join plots
 library(ggbreak)
+library(treemapify)
 ```
 
 ```{r Set palettes}
@@ -30,7 +31,7 @@ names(continent_pal) <- c("Africa",   "Asia",  "Europe", "South America", "Ocean
 scales::show_col(continent_pal)
 
 # Set the color palette for types of immune response, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
-immune_response_pal  <- c(         "#92c5de",           "#f4a582",            "#a6dba0",                 "#b2abd2")
+immune_response_pal  <- c("#92c5de","#993404","#dfc27d","#b2abd2")
 names(immune_response_pal) <- c("Innate response", "Adaptive response", "Antigen presentation", "Proinflammatory markers")
 scales::show_col(immune_response_pal)
 
@@ -125,7 +126,7 @@ gwas_noneur2<- gwas_noneur %>%
 
 fig2a <- ggplot(gwas_noneur2, aes(x = year, y=n, colour = general_ancestry, shape = general_ancestry)) +
   geom_point(size = 5, alpha = 0.7) +
-  scale_colour_manual(values = ancestries_palette) +
+  scale_colour_manual(values = ancestry_pal ) +
   scale_shape_manual(values = c(16, 17, 15, 10, 7, 16, 18))+
   scale_x_continuous(breaks = seq(2005, 2025, by = 1))+
   scale_y_continuous(breaks = seq(0, 2500, by =200))+
@@ -168,7 +169,7 @@ anc_noneur <- anc_noneur %>%
   filter(label != "0%")
 
 fig2b <-  ggplot(anc_noneur, aes(x = reorder(sp_ancestry, +percentage), y = percentage))+
-  geom_bar(stat = "identity",fill = "#d9d9d9")+
+  geom_bar(stat = "identity",fill = "#bfd3e6")+
   geom_text(aes(label = label), size = 3) +
   coord_flip()+
   labs(y = "Percentage (%)", 
@@ -343,7 +344,9 @@ fig2e <-ggplot(context_types, aes(x=context_type, y=n,fill=response_type))+
 fig2e
 
 # Extract legend
-legend_fig2e <- get_legend(fig2e) 
+legend_fig2e <- get_plot_component(fig2e, 
+                                   pattern = "guide-box-bottom",
+                                   return_all =  FALSE) 
 
 fig2e2 <-ggplot(context_types, aes(x=context_type, y=n,fill=response_type))+
   geom_bar(position = "stack", stat = "identity")+
@@ -387,11 +390,12 @@ fig_legend <- plot_grid(
   ncol=1)
 
 # Figure 2
-fig2_B <- plot_grid(  
+fig2_B<- plot_grid(  
   fig_up, fig_legend,
   labels = c('',''), 
   rel_heights = c(2,1.5),
   ncol=1)
 
 ggsave(filename= "~/Documents/R/Review/Sept/Figures/Figure_2.pdf", plot= fig2_B, width = 11, height = 12, dpi=300, units = "in", bg = "white" )
+ggsave(filename= "~/Documents/R/Review/Sept/Figures/Figure_2.png", plot= fig2_B, width = 11, height = 12, dpi=300, units = "in", bg = "white" )
 ```

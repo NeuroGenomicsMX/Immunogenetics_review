@@ -21,7 +21,7 @@ library(cowplot) # Join plots
 ```{r Set palettes}
 # Set the color palette for ancestries, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
 ancestry_pal  <- c(   "#b30000", "#f46d43", "#fee090", "#3f007d","#addd8e","#238443", "#80cdc1", "#de77ae")
-names(ancestry_pal) <- c("AFR",     "As",      "EUR",     "ME",   "LA/NAd",  "NA",      "O",     "Other")
+names(ancestry_pal) <- c("AFR",     "As",      "EUR",     "ME",   "LA/NAd",  "NAm",      "O",     "Other")
 scales::show_col(ancestry_pal) 
 
 # Set the color palette for continents, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
@@ -30,7 +30,7 @@ names(continent_pal) <- c("Africa",   "Asia",  "Europe", "South America", "Ocean
 scales::show_col(continent_pal)
 
 # Set the color palette for types of immune response, using https://colorbrewer2.org/#type=diverging&scheme=BrBG&n=9 colorblind options
-immune_response_pal  <- c(         "#92c5de",           "#f4a582",            "#a6dba0",                 "#b2abd2")
+immune_response_pal  <- c(         "#92c5de","#f4a582","#fdb863","#b2abd2")
 names(immune_response_pal) <- c("Innate response", "Adaptive response", "Antigen presentation", "Proinflammatory markers")
 scales::show_col(immune_response_pal)
 
@@ -52,7 +52,7 @@ names(ancestries_palette) <- c(
   "EUR",
   "ME", "As,EUR", "As,O", "AFR,EUR,As,LA/NAd","AFR,EUR,LA/NAd", "AFR,LA/NAd", "AFR,LA/NAd,As,EUR", "EUR,AFR","EUR,LA/NAd,AFR", "EUR,LA/NAd,As,AFR","GME",
   "LA/NAd",
-  "NA",
+  "NAm",
   "O",
   "Other",
   "Europe", "Asia", "NR", "Africa", "Latin America","Oceania","Multicenter","North America" )
@@ -211,13 +211,14 @@ sf_data_studies <- sf_data %>% #data for graphic
 worldmap <- sf_data_studies %>% 
   ggplot(mapping = aes(fill = n)) +
   geom_sf() +
-  scale_fill_gradientn(colours=c("#deebf7", "#6baed6"),
+  scale_fill_gradientn(colours=c("#67a9cf", "#f46d43"),
                          na.value = "grey100",
                        limits = c(1, 60))+ # Adjust the limit values
   labs(title = "Immunogenetics studies in underrepresented populations",
        fill = "Number of studies") + 
   theme_void() + # eliminate axes
   theme(plot.title = element_text(hjust = 0.5))
+
 
 ### Scatterpie for ancestries contribution
 ##Select data
@@ -249,7 +250,7 @@ capitals_coordinates <- capitals_coordinates %>%
 
 ##Setting na's as 0 before plotting
 ancestry_capital <- capitals_coordinates %>%
-  select(Country, lat, lon, Continent, n, "AFR","As","EUR","ME", "LA/NAd","NA","O","Other" ) %>%
+  select(Country, lat, lon, Continent, n, "AFR","As","EUR","ME", "LA/NAd","NAm","O","Other" ) %>%
   mutate(across(where(is.numeric), ~replace_na(. , 0)))  # Change NAs to 0 in numeric columns
 
 ## Plotting map and scatterpie 
@@ -258,7 +259,7 @@ ancestry_capital <- capitals_coordinates %>%
 ggplot()+
   geom_scatterpie(aes(x=lon, y=lat), 
                   data=ancestry_capital, 
-                  cols= c("AFR","As","EUR","ME", "LA/NAd", "NA","O","Other"))+
+                  cols= c("AFR","As","EUR","ME", "LA/NAd", "NAm","O","Other"))+
   scale_fill_manual(values = ancestry_pal)+
   theme_minimal()+
   theme(legend.position = 'bottom')
@@ -267,7 +268,7 @@ ggplot()+
 ggplot() +
   geom_scatterpie(aes(x=lon, y=lat), 
                   data=ancestry_capital, 
-                  cols= c("AFR","As","EUR","ME", "LA/NAd","NA","O","Other"),
+                  cols= c("AFR","As","EUR","ME", "LA/NAd","NAm","O","Other"),
                   pie_scale = 0.9,
                   legend_name = "Ancestry",
                   linewidth=0.2)+
@@ -288,16 +289,16 @@ sf_data_studies$n <- as.numeric(sf_data_studies$n)
 #Plotting number of studies, ancestries and geographic distribution
 fig1a <- ggplot() +
   geom_sf(data= sf_data_studies, aes(fill = n)) +
-  scale_fill_gradientn(colours=c("#deebf7", "#6baed6"),
+  scale_fill_gradientn(colours=c("#e1ecff","#bf812d"),
                          na.value = "grey100",
                        limits = c(1, 50))+ # Adjust the limit values
   new_scale_fill()+ ## to assign a new color scale 
   geom_scatterpie(aes(x=lon, y=lat),
                   data=ancestry_capital, 
-                  cols= c("AFR","As","EUR","ME","LA/NAd","NA","O","Other"),
+                  cols= c("AFR","As","EUR","ME","LA/NAd","NAm","O","Other"),
                    pie_scale = 0.5,
                   linewidth=0.2,
-                  alpha=0.5)+
+                  alpha=0.7)+
   scale_fill_manual(values = ancestry_pal)+
   theme_minimal()+
   theme(legend.key.size = unit(0.2,'cm'),
@@ -313,6 +314,30 @@ fig1a
 
 # Save plot
 ggsave(filename= "Figures/Figure_1_map.png", plot= fig1a, width = 11, height = 8, dpi=300, units = "in", bg = "white" )
+
+recruitment_df <- sf_data_studies %>%
+  select(Continent, Country, n) 
+
+total_countries <- sum(recruitment_df$n)
+total_countries
+
+recruitment_countries <- sf_data_studies %>%
+  select(Country, n) %>%
+  mutate(percent = n / sum(total_countries) * 100)
+
+recruitment_europe <- sf_data_studies %>%
+  select(Continent, Country, n)  %>%
+  filter(Continent == "Europe")
+
+recruitment_europe <- recruitment_europe  %>%
+  mutate(percent = n / sum(total_countries) * 100)  
+
+recruitment_perc <- recruitment_df%>%
+  group_by(Continent) %>%
+  summarise(total_n = sum(n, na.rm = TRUE))%>%
+  ungroup() %>%
+  mutate(percent = total_n / sum(total_n) * 100)
+
 
 ```
 
@@ -358,7 +383,7 @@ ancestry_capital <- ancestry_capital%>%
     )
   )
 studies_ancestries <- ancestry_capital%>% 
-  select(Continent, n, AFR, As, EUR, ME, "LA/NAd", "NA", O, Other)%>%
+  select(Continent, n, AFR, As, EUR, ME, "LA/NAd", "NAm", O, Other)%>%
   filter(n>=1) # To keep only studies with reported ancestries
 
 total_ancs <- sum(studies_ancestries$n)
@@ -372,7 +397,7 @@ ancs_sum <- colSums(total_ancestries, na.rm = TRUE)
 ancs_sum_df <- as_tibble(as.list(ancs_sum))
 
 anc_perc_df <- ancs_sum_df %>%
-    rename(LA_NAd = `LA/NAd`,NA_col = `NA`) %>%
+    rename(LA_NAd = `LA/NAd`,NA_col = `NAm`) %>%
   mutate(
     AFR_pct=AFR / total_ancs * 100,
     As_pct=As  / total_ancs * 100,
@@ -387,7 +412,7 @@ anc_perc_df <- ancs_sum_df %>%
 studies2 <- studies_ancestries %>%
   rename(
     LA_NAd = `LA/NAd`, 
-    NA_col = `NA`
+    NA_col = `NAm`
   )
 
 ancestries_continent <- studies2 %>%
@@ -433,6 +458,13 @@ percentages_by_continent <- studies2 %>%
 ## Create plot
 ```{r Plot ancestries by geographic region}
 # Select data
+gwas_desc <- gwas_data %>% 
+  select(DATE, PUBMEDID, `DISEASE/TRAIT`, `BROAD ANCESTRAL CATEGORY`, `COUNTRY OF ORIGIN`, `COUNTRY OF RECRUITMENT`, SNPS, sp_ancestry, recruitment_cont, response, Global_response, sp_ancestry, general_ancestry)
+
+# Recover year of the GWAS
+gwas_desc$date <- as.Date(gwas_desc$DATE, format = "%Y/%m/%d")
+gwas_desc$year <- format(gwas_desc$date, "%Y")
+
 gwas_rec <- gwas_desc %>% 
   select(year, PUBMEDID, recruitment_cont, general_ancestry, `BROAD ANCESTRAL CATEGORY`)%>% 
   unique()
@@ -483,7 +515,7 @@ df_long <- df_long %>%
    mutate(Ancestry = replace(Ancestry, Ancestry== "EUR_pct", "EUR"))%>%
    mutate(Ancestry = replace(Ancestry, Ancestry== "ME_pct", "ME"))%>%
    mutate(Ancestry = replace(Ancestry, Ancestry== "LA_NAd_pct", "LA/NAd"))%>%
-   mutate(Ancestry = replace(Ancestry, Ancestry== "NA_pct", "NA"))
+   mutate(Ancestry = replace(Ancestry, Ancestry== "NA_pct", "NAm"))
 
 ## Plot proportion of ancestries reported by geographic region
 fig1b <-ggplot(df_long, aes(x = Continent, y = Percentage, fill = Ancestry)) +
@@ -509,13 +541,6 @@ fig1b
 ## STEP 5: Figure 1c. Analysis through time of studies associated with European and non-European ancestries
 ```{r Time analysis of reported ancestries in the included studies}
 # Select data
-gwas_desc <- gwas_data %>% 
-  select(DATE, PUBMEDID, `DISEASE/TRAIT`, `BROAD ANCESTRAL CATEGORY`, `COUNTRY OF ORIGIN`, `COUNTRY OF RECRUITMENT`, SNPS, sp_ancestry, recruitment_cont, response, Global_response, sp_ancestry, general_ancestry)
-
-# Recover year of the GWAS
-gwas_desc$date <- as.Date(gwas_desc$DATE, format = "%Y/%m/%d")
-gwas_desc$year <- format(gwas_desc$date, "%Y")
-
 # Keep only unique GWAS
 gwas_anc <- gwas_desc %>% 
   select(year, PUBMEDID, `BROAD ANCESTRAL CATEGORY`, recruitment_cont,sp_ancestry, general_ancestry)%>% 
@@ -595,7 +620,8 @@ fig1 <- plot_grid(
 fig1
 
 # Save plot
-ggsave(filename= "Figures/Figure_1.pdf", plot= fig1, width = 10, height = 15, dpi=300, units = "in", bg = "white" )
+ggsave(filename= "Figures/Figures_PDF/Figure_1.pdf", plot= fig1, width = 10, height = 15, dpi=300, units = "in", bg = "white" )
+ggsave(filename= "Figures/Figure_1.png", plot= fig1, width = 10, height = 15, dpi=300, units = "in", bg = "white" )
 
 ```
 
