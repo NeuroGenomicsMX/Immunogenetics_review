@@ -623,6 +623,15 @@ fig1
 ggsave(filename= "Figures/Figures_PDF/Figure_1.pdf", plot= fig1, width = 10, height = 15, dpi=300, units = "in", bg = "white" )
 ggsave(filename= "Figures/Figure_1.png", plot= fig1, width = 10, height = 15, dpi=300, units = "in", bg = "white" )
 
+tiff("Figure1.tiff", width = 10, height = 15, units = "in", res = 300)
+ plot_grid(  
+  fig1a, fig1bc,
+  labels = c("",""),
+  ncol=1,
+  rel_heights = c(1.7, 2),
+  panel_spacing= unit(0.2, "cm"))
+ dev.off()
+
 ```
 
 

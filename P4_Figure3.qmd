@@ -264,6 +264,13 @@ snp_ancestry_group <- immune_snps_2%>%
   left_join(snp_ancestry, by = "SNPS") %>%
   mutate(Category = ifelse(n_ancestries == 1, "Unique", "Shared"))
 
+snp_anc_perc <- snp_ancestry_group %>%
+  select(Category, general_ancestry) 
+
+snp_anc_perc <- snp_anc_perc %>%
+  count(.$Category, "Unique") %>% 
+  mutate(percent = n/ sum(n) * 100)
+
 # Count shared and exclusive SNPs
 ancestries_sum <- snp_ancestry_group %>%
   group_by(general_ancestry, Category) %>%
@@ -538,4 +545,11 @@ fig_3
 ggsave(filename= "~/Documents/R/Review/Sept/Figures/Figure_3.pdf", plot= fig_3, width = 11, height = 15, dpi=300, units = "in", bg = "white" )
 
 ggsave(filename= "~/Documents/R/Review/Sept/Figures/Figure_3.png", plot= fig_3, width = 11, height = 15, dpi=300, units = "in", bg = "white" )
+tiff("Figure3.tiff", width = 11, height = 15, units = "in", res = 300)
+plot_grid(
+  fig_3ab, fig_3cd_leg, fig3e,
+  labels = c("","",""),
+  ncol = 1,
+  rel_heights = c(1,1.5,1))
+ dev.off()
 ```

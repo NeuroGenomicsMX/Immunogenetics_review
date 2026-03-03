@@ -413,4 +413,12 @@ fig2_B<- plot_grid(
 
 ggsave(filename= "~/Documents/R/Review/Sept/Figures/Figure_2.pdf", plot= fig2_B, width = 11, height = 12, dpi=300, units = "in", bg = "white" )
 ggsave(filename= "~/Documents/R/Review/Sept/Figures/Figure_2.png", plot= fig2_B, width = 11, height = 11, dpi=400, units = "in", bg = "white" )
+
+tiff("Figure2.tiff", width = 11, height = 11, units = "in", res = 300)
+  plot_grid(  
+  fig_up, fig_legend,
+  labels = c('',''), 
+  rel_heights = c(2,1.5),
+  ncol=1)
+ dev.off()
 ```
