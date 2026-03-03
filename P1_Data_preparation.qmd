@@ -420,7 +420,7 @@ gwas_data <- gwas_data %>%
   mutate( sp_ancestry = replace( sp_ancestry,  sp_ancestry == "Sub-Saharan African", "SSA")) %>%   
   
   ## Latin American \n Native American descendants (LA/NA)
-  mutate( sp_ancestry= replace( sp_ancestry,  sp_ancestry == "Native American", "NA")) %>% 
+  mutate( sp_ancestry= replace( sp_ancestry,  sp_ancestry == "Native American", "NAm")) %>% 
   mutate( sp_ancestry= replace( sp_ancestry, sp_ancestry == "Hispanic or Latin American", "LA/NAd")) %>% 
   
   ## Multiethnic (Greater Middle Eastern (Middle Eastern, North African or Persian)=GME)
@@ -2201,7 +2201,7 @@ gwas_data <- gwas_data %>%
     general_ancestry == "Other/No reported" ~  "Other",
     general_ancestry == "Multiethnic" ~  "ME",
     general_ancestry == "Latin American/Native American descent" ~  "LA/NAd",
-    general_ancestry == "Native American" ~  "NA",
+    general_ancestry == "Native American" ~  "NAm",
   .default = general_ancestry)) %>%
   
   # Add effect of the variants
