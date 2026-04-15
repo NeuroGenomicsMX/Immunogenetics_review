@@ -325,7 +325,7 @@ fig3b <- ggplot(immune_snps_4 , aes(x = general_ancestry, y = Global_response, s
   theme(plot.title = element_text(size = 12, hjust = 0.5, face = "bold"),
     legend.key.size = unit(0.1,'cm'),
     axis.text.x = element_text(size = 8, hjust = 0.5),
-    legend.position = "bottom",
+    legend.position = "right",
     legend.title = element_blank(),
     legend.text = element_text(size=8),
     axis.title = element_text(size = 8, face = "bold"), 
@@ -340,8 +340,7 @@ fig3b <- ggplot(immune_snps_4 , aes(x = general_ancestry, y = Global_response, s
     color = "Immune Response"
   )+
   guides(
-    color = "none",
-    size = guide_legend(override.aes = list(size = 3)))
+    color = "none" ) 
 
 #Join plots
 fig_3ab <- plot_grid(
