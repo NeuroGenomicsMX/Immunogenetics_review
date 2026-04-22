@@ -319,7 +319,9 @@ immune_snps_4 <-immune_snps_exclusive %>%
 
 fig3b <- ggplot(immune_snps_4 , aes(x = general_ancestry, y = Global_response, size = exclusive_SNPs, color = Global_response)) +
   geom_point(alpha = 0.7) +
-  scale_size(range = c(2, 10)) +  # Bubble size
+  scale_size(range = c(2,10),
+             breaks = c(2, 10, 50, 200, 1000, 2500),
+             labels = c("2", "10", "50", "200", "1000", "2500")) +  # Bubble size
   scale_color_manual(values = immune_response_pal) +
   theme_minimal() +
   theme(plot.title = element_text(size = 12, hjust = 0.5, face = "bold"),
@@ -328,6 +330,7 @@ fig3b <- ggplot(immune_snps_4 , aes(x = general_ancestry, y = Global_response, s
     legend.position = "right",
     legend.title = element_blank(),
     legend.text = element_text(size=8),
+    legend.key.spacing.y = unit(0.3, "cm"),
     axis.title = element_text(size = 8, face = "bold"), 
     axis.text.y = element_text(size = 8),
     legend.box = "vertical"
@@ -432,7 +435,8 @@ snps_anc_sum <-snps_anc_sum %>%
 # Plot  
 fig3d <- ggplot(snps_anc_sum, aes(x = general_ancestry, y = response, color = Global_response)) +
   geom_point(aes(size = n )) +
-  scale_size(range = c(1, 5)) +
+  scale_size(range = c(1, 6),
+             breaks = c(1, 5, 25, 100, 300, 500)) +
   scale_color_manual(values = immune_response_pal)+ 
   theme_minimal() +
   labs(
@@ -452,7 +456,7 @@ fig3d <- ggplot(snps_anc_sum, aes(x = general_ancestry, y = response, color = Gl
     axis.title.y = element_text(size = 8, face = "bold"),
     axis.text.x = element_text(size =8))+
     guides(
-    size = guide_legend(order = 1, hjust = 0.5),
+    size = guide_legend(order = 1, hjust = 0.5, nrow = 1),
     color = "none")
 fig3d
 
@@ -541,9 +545,9 @@ fig_3 <- plot_grid(
 )
 fig_3
 
-ggsave(filename= "~/Documents/R/Review/Sept/Figures/Figure_3.pdf", plot= fig_3, width = 11, height = 15, dpi=300, units = "in", bg = "white" )
+ggsave(filename= "~/Documents/R/Review/Sept/Figures/Figure_3.pdf", plot= fig_3, width = 11, height = 16.5, dpi=300, units = "in", bg = "white" )
 
-ggsave(filename= "~/Documents/R/Review/Sept/Figures/Figure_3.png", plot= fig_3, width = 11, height = 15, dpi=300, units = "in", bg = "white" )
+ggsave(filename= "~/Documents/R/Review/Sept/Figures/Figure_3.png", plot= fig_3, width = 11, height = 16.5, dpi=300, units = "in", bg = "white" )
 tiff("Figure3.tiff", width = 11, height = 15, units = "in", res = 300)
 plot_grid(
   fig_3ab, fig_3cd_leg, fig3e,
